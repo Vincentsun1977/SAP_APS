@@ -39,6 +39,7 @@ class ProductionDelayModel:
             "random_state": 42,
             "n_jobs": -1,
             "scale_pos_weight": 1,
+            "early_stopping_rounds": 10,
         }
         
         self.params = model_params or default_params
@@ -76,12 +77,11 @@ class ProductionDelayModel:
             eval_set.append((X_val, y_val))
             logger.info(f"Validation samples: {len(X_val)}")
         
-        # Train
+        # Train (XGBoost 3.0+ handles early stopping automatically if set in params)
         self.model.fit(
             X_train,
             y_train,
             eval_set=eval_set,
-            early_stopping_rounds=early_stopping_rounds,
             verbose=True
         )
         
@@ -175,12 +175,13 @@ class ProductionDelayModel:
         path = Path(filepath)
         path.parent.mkdir(parents=True, exist_ok=True)
         
-        self.model.save_model(str(path))
+        # Use joblib to save the entire model object
+        joblib.dump(self.model, str(path))
         logger.info(f"Model saved to {filepath}")
     
     def load(self, filepath: str):
         """Load model from file"""
-        self.model.load_model(filepath)
+        self.model = joblib.load(filepath)
         self.is_trained = True
         logger.info(f"Model loaded from {filepath}")
     

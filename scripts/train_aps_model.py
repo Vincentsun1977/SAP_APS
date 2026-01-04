@@ -125,7 +125,7 @@ def main():
     # 7. Save model
     logger.info("\nStep 7: Saving model")
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    model_path = f"models/aps_xgb_model_{timestamp}.json"
+    model_path = f"models/aps_xgb_model_{timestamp}.pkl"
     model.save(model_path)
     
     # 8. Save metadata to Supabase

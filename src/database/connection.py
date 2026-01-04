@@ -1,8 +1,13 @@
 """
 Supabase database connection and operations
 """
-from supabase import create_client, Client
-from config import get_settings
+try:
+    from supabase import create_client, Client
+    SUPABASE_AVAILABLE = True
+except ImportError:
+    SUPABASE_AVAILABLE = False
+    Client = None
+
 from typing import Optional
 
 
@@ -10,15 +15,25 @@ class SupabaseDB:
     """Supabase database client wrapper"""
     
     def __init__(self):
-        settings = get_settings()
-        self.client: Client = create_client(
-            settings.supabase_url,
-            settings.supabase_key
-        )
-        self.service_client: Client = create_client(
-            settings.supabase_url,
-            settings.supabase_service_key
-        )
+        if not SUPABASE_AVAILABLE:
+            self.client = None
+            self.service_client = None
+            return
+        
+        try:
+            from config import get_settings
+            settings = get_settings()
+            self.client: Client = create_client(
+                settings.supabase_url,
+                settings.supabase_key
+            )
+            self.service_client: Client = create_client(
+                settings.supabase_url,
+                settings.supabase_service_key
+            )
+        except Exception:
+            self.client = None
+            self.service_client = None
     
     def insert_orders(self, orders: list[dict]) -> dict:
         """Insert production orders into database"""
@@ -56,6 +71,8 @@ class SupabaseDB:
     
     def save_model_metadata(self, metadata: dict) -> dict:
         """Save model training metadata"""
+        if self.client is None:
+            raise Exception("Supabase not available")
         response = self.client.table("model_metadata").insert(metadata).execute()
         return response.data
 

@@ -98,7 +98,7 @@ class APSDataLoader:
         date_cols = ['planned_start_date', 'planned_finish_date', 'actual_finish_date', 'created_date']
         for col in date_cols:
             if col in df.columns:
-                df[col] = pd.to_datetime(df[col], format='%Y/%m/%d', errors='coerce')
+                df[col] = pd.to_datetime(df[col], errors='coerce')
         
         # Filter only completed orders (with actual finish date)
         df_completed = df[df['actual_finish_date'].notna()].copy()

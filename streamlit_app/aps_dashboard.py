@@ -74,7 +74,8 @@ def load_training_data():
 def load_aps_model():
     """加载APS模型"""
     import glob
-    model_files = glob.glob("models/aps_xgb_model_*.json")
+    # 查找.pkl文件（新格式）或.json文件（旧格式）
+    model_files = glob.glob("models/aps_xgb_model_*.pkl") + glob.glob("models/aps_xgb_model_*.json")
     if not model_files:
         return None
     
