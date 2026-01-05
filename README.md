@@ -38,10 +38,10 @@
 - 2,491条历史订单训练数据
 
 #### 模型性能
-- **准确率**: 91.2%
-- **ROC AUC**: 0.919
-- **精确率**: 92.2%
-- **召回率**: 44.6%
+- **准确率**: 84.8%
+- **ROC AUC**: 0.902
+- **精确率**: 49.2%
+- **召回率**: 83.8%
 
 #### Dashboard功能
 - 🏠 总览Dashboard - 核心KPI和趋势
@@ -55,7 +55,7 @@
 #### 1. 克隆项目
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/sap-production-delay-predictor.git
+git clone https://github.com/Vincentsun1977/sap-production-delay-predictor.git
 cd sap-production-delay-predictor
 ```
 
@@ -217,11 +217,11 @@ print(f"延迟概率: {delay_prob[0]:.1%}")
 
 | 指标 | 分数 |
 |------|------|
-| 准确率 | 91.2% |
-| 精确率 | 92.2% |
-| 召回率 | 44.6% |
-| F1 Score | 0.601 |
-| ROC AUC | 0.919 |
+| 准确率 | 84.8% |
+| 精确率 | 49.2% |
+| 召回率 | 83.8% |
+| F1 Score | 0.620 |
+| ROC AUC | 0.902 |
 
 **延迟率分布：**
 - 延迟订单：370 (14.9%)
@@ -256,7 +256,7 @@ A: 调整分类阈值（默认0.5）或使用SMOTE处理类别不平衡。
 
 ### 📞 联系方式
 
-如有问题或建议，请提交 [Issue](https://github.com/YOUR_USERNAME/sap-production-delay-predictor/issues)
+如有问题或建议，请提交 [Issue](https://github.com/Vincentsun1977/sap-production-delay-predictor/issues)
 
 ---
 
@@ -267,15 +267,15 @@ A: 调整分类阈值（默认0.5）或使用SMOTE处理类别不平衡。
 A machine learning-based SAP production order delay prediction system using XGBoost algorithm to analyze historical production data and predict order delay risks, helping enterprises take proactive actions and optimize production scheduling.
 
 **Key Features:**
-- 🤖 **Smart Prediction** - 91.2% accuracy delay prediction model
-- 📊 **Visual Dashboard** - Streamlit interactive analysis panel
+- 🤖 **Smart Prediction** - 84.8% accuracy, 83.8% recall delay prediction model
+- 📈 **Visual Dashboard** - Streamlit interactive analysis panel
 - 📈 **Feature Engineering** - 36-dimensional automated feature generation
 - ⚠️ **Risk Identification** - High-risk materials and orders identification
 - 📉 **Trend Analysis** - Multi-dimensional production delay trends
 
 ### ✨ Highlights
 
-- **High Accuracy**: 91.2% accuracy, 0.919 ROC AUC
+- **High Accuracy**: 84.8% accuracy, 0.902 ROC AUC, 83.8% recall
 - **5 Data Sources**: Integrates Order, FG, Capacity, APS, History CSV files
 - **36 Features**: Automatic generation of predictive features
 - **Interactive Dashboard**: 5 functional pages for comprehensive analysis
@@ -303,11 +303,11 @@ streamlit run streamlit_app/aps_dashboard.py
 
 | Metric | Score |
 |--------|-------|
-| Accuracy | 91.2% |
-| Precision | 92.2% |
-| Recall | 44.6% |
-| F1 Score | 0.601 |
-| ROC AUC | 0.919 |
+| Accuracy | 84.8% |
+| Precision | 49.2% |
+| Recall | 83.8% |
+| F1 Score | 0.620 |
+| ROC AUC | 0.902 |
 
 ### 🛠️ Tech Stack
 
