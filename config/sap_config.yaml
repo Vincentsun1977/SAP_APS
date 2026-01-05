@@ -1,0 +1,100 @@
+# SAP OData 连接配置
+# 复制此文件为 sap_config_prod.yaml 并填入实际值
+
+sap:
+  # 连接信息
+  host: "sap-server.company.com"
+  port: 443
+  protocol: "https"
+  client: "100"
+  
+  # 认证信息（使用环境变量更安全）
+  auth:
+    type: "basic"  # basic / oauth / certificate
+    username: "${SAP_USERNAME}"
+    password: "${SAP_PASSWORD}"
+    
+    # OAuth 配置（如果使用）
+    oauth:
+      token_url: "/sap/bc/sec/oauth2/token"
+      client_id: "${SAP_CLIENT_ID}"
+      client_secret: "${SAP_CLIENT_SECRET}"
+  
+  # OData 服务路径
+  services:
+    production_orders: "/sap/opu/odata/sap/Z_PROD_ORDER_HISTORY_SRV"
+    material_master: "/sap/opu/odata/sap/Z_MATERIAL_MASTER_SRV"
+    line_capacity: "/sap/opu/odata/sap/Z_LINE_CAPACITY_SRV"
+  
+  # 请求配置
+  request:
+    timeout: 30  # 秒
+    verify_ssl: true
+    max_retries: 3
+    retry_delay: 5  # 秒
+  
+# 数据同步配置
+sync:
+  # 同步模式
+  mode: "incremental"  # full / incremental
+  
+  # 全量同步起始日期
+  full_sync_start_date: "2024-01-01"
+  
+  # 增量同步配置
+  incremental:
+    enabled: true
+    last_sync_file: ".last_sap_sync"
+    lookback_days: 7  # 回溯天数（防止遗漏）
+  
+  # 分页配置
+  pagination:
+    batch_size: 1000
+    max_records: null  # null = 无限制
+  
+  # 输出配置
+  output:
+    directory: "data/raw"
+    format: "csv"  # csv / parquet / json
+    encoding: "utf-8"
+    
+    # 文件命名
+    files:
+      history: "History.csv"
+      fg: "FG.csv"
+      capacity: "Capacity.csv"
+  
+  # 数据验证
+  validation:
+    enabled: true
+    required_fields:
+      - "OrderNumber"
+      - "MaterialNumber"
+      - "BasicStartDate"
+      - "BasicFinishDate"
+      - "ActualFinishDate"
+    
+    # 数据质量检查
+    quality_checks:
+      - "no_null_in_required_fields"
+      - "valid_date_format"
+      - "positive_quantities"
+
+# 日志配置
+logging:
+  level: "INFO"  # DEBUG / INFO / WARNING / ERROR
+  file: "logs/sap_sync_{time}.log"
+  rotation: "1 day"
+  retention: "30 days"
+  
+# 通知配置
+notifications:
+  enabled: false
+  email:
+    smtp_server: "smtp.company.com"
+    smtp_port: 587
+    from_address: "ml-system@company.com"
+    to_addresses:
+      - "data-team@company.com"
+    on_failure: true
+    on_success: false
