@@ -107,7 +107,11 @@ class APSFeatureEngineer:
         
         # Capacity utilization features (already have qty_capacity_ratio and expected_production_days)
         # Add production complexity indicator
-        df['production_complexity'] = df['total_production_time'] * df['constraint']
+        # constraint_factor = maximum daily capacity (units/day) under full load
+        # total_production_time = days required to produce one unit
+        # production_complexity = simply use production time as complexity measure
+        # Higher value = more complex/time-intensive product (2.5 > 2.0 = more complex)
+        df['production_complexity'] = df['total_production_time']
         
         # Is large order (> 10 units)
         df['is_large_order'] = (df['order_quantity'] > 10).astype(int)
@@ -188,7 +192,7 @@ class APSFeatureEngineer:
             'order_quantity',
             'total_production_time',
             'line_capacity',
-            'constraint',
+            'constraint_factor',
             'earliest_start_days',
             'qty_capacity_ratio',
             'expected_production_days',

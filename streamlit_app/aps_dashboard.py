@@ -63,10 +63,21 @@ st.markdown("""
 def load_training_data():
     """加载训练数据"""
     try:
-        df = pd.read_csv("data/processed/aps_training_data_full.csv")
+        # Try optimized version first (latest), then fall back to full version
+        try:
+            df = pd.read_csv("data/processed/aps_training_data_optimized.csv")
+        except:
+            df = pd.read_csv("data/processed/aps_training_data_full.csv")
+        
         df['planned_start_date'] = pd.to_datetime(df['planned_start_date'])
+        
+        # Handle legacy column name (constraint -> constraint_factor)
+        if 'constraint' in df.columns and 'constraint_factor' not in df.columns:
+            df['constraint_factor'] = df['constraint']
+        
         return df
-    except:
+    except Exception as e:
+        st.error(f"Error loading training data: {e}")
         return None
 
 

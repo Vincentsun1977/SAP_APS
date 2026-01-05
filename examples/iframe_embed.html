@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAP生产延迟预测Dashboard - iframe嵌入示例</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1920px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px 30px;
+            border-radius: 12px 12px 0 0;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        .title-section h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .title-section p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .metrics {
+            display: flex;
+            gap: 30px;
+        }
+        
+        .metric-card {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px 20px;
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .metric-value {
+            font-size: 32px;
+            font-weight: bold;
+            line-height: 1;
+            margin-bottom: 5px;
+        }
+        
+        .metric-label {
+            font-size: 12px;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .dashboard-wrapper {
+            position: relative;
+            background: white;
+            border-radius: 0 0 12px 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            transition: opacity 0.3s ease;
+        }
+        
+        .loading-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .spinner {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #667eea;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            color: #667eea;
+            font-size: 16px;
+            font-weight: 500;
+        }
+        
+        #dashboard-iframe {
+            width: 100%;
+            height: calc(100vh - 180px);
+            min-height: 600px;
+            border: none;
+            display: block;
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        .footer a:hover {
+            text-decoration: underline;
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header {
+                padding: 15px;
+            }
+            
+            .header-content {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .title-section h1 {
+                font-size: 20px;
+            }
+            
+            .metrics {
+                width: 100%;
+                justify-content: space-between;
+                gap: 10px;
+            }
+            
+            .metric-card {
+                padding: 10px 15px;
+                flex: 1;
+            }
+            
+            .metric-value {
+                font-size: 24px;
+            }
+            
+            .metric-label {
+                font-size: 10px;
+            }
+            
+            #dashboard-iframe {
+                height: calc(100vh - 200px);
+            }
+        }
+        
+        /* 打印样式 */
+        @media print {
+            .header, .footer {
+                display: none;
+            }
+            
+            #dashboard-iframe {
+                height: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <div class="header">
+            <div class="header-content">
+                <div class="title-section">
+                    <h1>
+                        <span>📊</span>
+                        <span>SAP生产延迟预测Dashboard</span>
+                    </h1>
+                    <p>基于XGBoost的智能预测系统 | 实时监控生产延迟风险</p>
+                </div>
+                
+                <div class="metrics">
+                    <div class="metric-card">
+                        <div class="metric-value">84.8%</div>
+                        <div class="metric-label">准确率</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">83.8%</div>
+                        <div class="metric-label">召回率</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">0.902</div>
+                        <div class="metric-label">ROC AUC</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Dashboard iframe -->
+        <div class="dashboard-wrapper">
+            <div id="loading" class="loading-overlay">
+                <div class="spinner"></div>
+                <div class="loading-text">正在加载Dashboard...</div>
+            </div>
+            
+            <iframe 
+                id="dashboard-iframe"
+                src="http://localhost:8501?embed=true" 
+                title="SAP Production Delay Predictor Dashboard"
+                allow="clipboard-write; fullscreen"
+                allowfullscreen
+                onload="hideLoading()">
+            </iframe>
+        </div>
+        
+        <!-- 页脚 -->
+        <div class="footer">
+            <p>
+                Powered by <a href="https://streamlit.io" target="_blank">Streamlit</a> & 
+                <a href="https://xgboost.ai" target="_blank">XGBoost</a> | 
+                <a href="https://github.com/Vincentsun1977/sap-production-delay-predictor" target="_blank">
+                    GitHub Repository
+                </a>
+            </p>
+        </div>
+    </div>
+    
+    <script>
+        // 隐藏加载动画
+        function hideLoading() {
+            setTimeout(() => {
+                document.getElementById('loading').classList.add('hidden');
+            }, 500);
+        }
+        
+        // 错误处理
+        window.addEventListener('error', function(e) {
+            if (e.target.tagName === 'IFRAME') {
+                console.error('Dashboard加载失败，请确保Streamlit服务正在运行');
+                document.getElementById('loading').innerHTML = `
+                    <div style="text-align: center; color: #d32f2f;">
+                        <h3>⚠️ Dashboard加载失败</h3>
+                        <p>请确保Streamlit服务正在运行：</p>
+                        <code style="background: #f5f5f5; padding: 10px; display: block; margin: 10px 0;">
+                            streamlit run streamlit_app/aps_dashboard.py
+                        </code>
+                    </div>
+                `;
+            }
+        }, true);
+        
+        // 自动刷新检测（可选）
+        let lastCheck = Date.now();
+        setInterval(() => {
+            // 每30秒检查一次iframe是否还在响应
+            const iframe = document.getElementById('dashboard-iframe');
+            try {
+                // 尝试访问iframe（如果可以访问说明同源）
+                if (iframe.contentWindow) {
+                    lastCheck = Date.now();
+                }
+            } catch (e) {
+                // 跨域时无法访问，这是正常的
+            }
+        }, 30000);
+    </script>
+</body>
+</html>

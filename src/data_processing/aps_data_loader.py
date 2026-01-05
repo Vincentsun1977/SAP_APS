@@ -143,19 +143,20 @@ class APSDataLoader:
         fg_df.columns = fg_df.columns.str.strip()
         
         # Rename FG columns
+        # Note: 'Constraint' in FG.csv = daily production capacity (units/day) for material on line
         fg_mapping = {
             'Production Line': 'production_line',
             'Material': 'material',
             'Material Description': 'fg_material_description',
-            'Constraint': 'constraint',
+            'Constraint': 'constraint_factor',  # Daily capacity (units/day)
             'earlist strart date': 'earliest_start_days',
-            'Total production Time': 'total_production_time'
+            'Total production Time': 'total_production_time'  # Hours per unit
         }
         fg_df = fg_df.rename(columns=fg_mapping)
         
         # Merge on material
         merged = history_df.merge(
-            fg_df[['material', 'production_line', 'constraint', 'earliest_start_days', 'total_production_time']],
+            fg_df[['material', 'production_line', 'constraint_factor', 'earliest_start_days', 'total_production_time']],
             on='material',
             how='left'
         )
@@ -248,7 +249,10 @@ class APSDataLoader:
         df['order_quantity'] = pd.to_numeric(df['order_quantity'], errors='coerce')
         df['line_capacity'] = pd.to_numeric(df['line_capacity'], errors='coerce')
         df['total_production_time'] = pd.to_numeric(df['total_production_time'], errors='coerce')
-        df['constraint'] = pd.to_numeric(df['constraint'], errors='coerce')
+        # rename and coerce constraint_factor from FG to numeric
+        if 'constraint' in df.columns and 'constraint_factor' not in df.columns:
+            df['constraint_factor'] = df['constraint']
+        df['constraint_factor'] = pd.to_numeric(df['constraint_factor'], errors='coerce')
         df['earliest_start_days'] = pd.to_numeric(df['earliest_start_days'], errors='coerce')
         
         # Quantity vs capacity ratio
