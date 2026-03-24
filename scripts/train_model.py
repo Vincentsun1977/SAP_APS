@@ -8,6 +8,7 @@ from src.data_collection.csv_loader import CSVLoader
 from src.data_processing.feature_engineer import FeatureEngineer
 from src.models.xgboost_model import ProductionDelayModel
 from src.database.connection import db
+from src.config.paths import RAW_DATA_DIR, MODELS_DIR
 from loguru import logger
 import pandas as pd
 import numpy as np
@@ -23,7 +24,7 @@ def main():
     
     # 1. Load data
     logger.info("Step 1: Loading CSV data")
-    loader = CSVLoader(data_dir="data/raw")
+    loader = CSVLoader(data_dir=str(RAW_DATA_DIR))
     
     df = loader.load_production_orders()
     
@@ -95,8 +96,8 @@ def main():
     # 7. Save model
     logger.info("Step 7: Saving model")
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    model_path = f"models/xgb_model_{timestamp}.json"
-    model.save(model_path)
+    model_path = MODELS_DIR / f"xgb_model_{timestamp}.json"
+    model.save(str(model_path))
     
     # 8. Save metadata to Supabase
     logger.info("Step 8: Saving model metadata")
@@ -111,7 +112,7 @@ def main():
         "f1_score": metrics["f1_score"],
         "feature_importance": importance,
         "hyperparameters": model.params,
-        "model_path": model_path,
+        "model_path": str(model_path),
         "is_active": True  # Mark as active model
     }
     

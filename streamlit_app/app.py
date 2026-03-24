@@ -9,6 +9,7 @@ sys.path.append('.')
 from src.data_collection.csv_loader import CSVLoader
 from src.data_processing.feature_engineer import FeatureEngineer
 from src.models.xgboost_model import ProductionDelayModel
+from src.config.paths import RAW_DATA_DIR, SAMPLE_DATA_DIR, get_latest_legacy_xgb_model_path
 from loguru import logger
 
 # Page config
@@ -53,7 +54,7 @@ st.markdown("""
 @st.cache_data
 def load_data():
     """Load and cache production order data"""
-    loader = CSVLoader(data_dir="data/sample")
+    loader = CSVLoader(data_dir=str(SAMPLE_DATA_DIR))
     df = loader.load_production_orders()
     return df
 
@@ -61,14 +62,12 @@ def load_data():
 @st.cache_resource
 def load_model():
     """Load trained model"""
-    import glob
-    model_files = glob.glob("models/xgb_model_*.json")
-    if not model_files:
+    latest_model = get_latest_legacy_xgb_model_path()
+    if latest_model is None:
         return None
-    
-    latest_model = max(model_files)
+
     model = ProductionDelayModel()
-    model.load(latest_model)
+    model.load(str(latest_model))
     return model
 
 
@@ -157,7 +156,7 @@ def show_data_overview(df):
             title="订单状态",
             color_discrete_sequence=px.colors.qualitative.Set3
         )
-        st.plotly_chart(fig_status, width='stretch')
+        st.plotly_chart(fig_status, use_container_width=True)
     
     with col2:
         st.subheader("工厂分布")
@@ -170,7 +169,7 @@ def show_data_overview(df):
             color=plant_counts.values,
             color_continuous_scale='Blues'
         )
-        st.plotly_chart(fig_plant, width='stretch')
+        st.plotly_chart(fig_plant, use_container_width=True)
     
     # Data table
     st.subheader("📋 原始数据")
@@ -190,7 +189,8 @@ def show_prediction(df, model):
     
     if len(df_pending) == 0:
         st.info("📝 当前没有待预测的订单（示例数据中所有订单均已完成）")
-        st.info("💡 您可以在 `data/sample/production_orders.csv` 中添加新订单测试预测功能")
+        sample_hint = SAMPLE_DATA_DIR / "production_orders.csv"
+        st.info(f"💡 您可以在 `{sample_hint}` 中添加新订单测试预测功能")
         return
     
     st.info(f"发现 {len(df_pending)} 个待预测订单")
@@ -259,7 +259,7 @@ def show_prediction(df, model):
                         }
                     ))
                     fig.update_layout(height=250)
-                    st.plotly_chart(fig, width='stretch', key=f"gauge_{row['order_id']}")
+                    st.plotly_chart(fig, use_container_width=True)
                 
                 # Recommendations
                 if row['delay_proba'] >= 0.7:
@@ -324,7 +324,7 @@ def show_historical_analysis(df):
             title="订单交付情况",
             color_discrete_map={'按时': 'green', '延期': 'red'}
         )
-        st.plotly_chart(fig, width='stretch')
+        st.plotly_chart(fig, use_container_width=True)
     
     with col2:
         st.subheader("延期天数分布")
@@ -336,7 +336,7 @@ def show_historical_analysis(df):
             labels={'delay_days': '延期天数', 'count': '订单数'},
             color_discrete_sequence=['coral']
         )
-        st.plotly_chart(fig, width='stretch')
+        st.plotly_chart(fig, use_container_width=True)
     
     # Material analysis
     st.subheader("物料延期分析")
@@ -364,14 +364,14 @@ def show_historical_analysis(df):
         color='延期率',
         color_continuous_scale='Reds'
     )
-    st.plotly_chart(fig, width='stretch')
+    st.plotly_chart(fig, use_container_width=True)
 
 
 def show_about():
     """Display about page"""
     st.header("ℹ️ 关于系统")
     
-    st.markdown("""
+    st.markdown(f"""
     ### 🎯 系统简介
     
     SAP 生产订单延期预测系统基于 **XGBoost** 机器学习算法，帮助企业提前识别可能延期的生产订单。
@@ -392,7 +392,7 @@ def show_about():
     
     ### 📚 使用指南
     
-    1. **准备数据**: 将 SAP 导出的 CSV 文件放入 `data/raw/` 目录
+    1. **准备数据**: 将 SAP 导出的 CSV 文件放入 `{RAW_DATA_DIR}` 目录
     2. **训练模型**: 运行 `python scripts/train_model.py`
     3. **启动应用**: 运行 `streamlit run streamlit_app/app.py`
     

@@ -3,12 +3,101 @@
 """
 import streamlit as st
 import pandas as pd
+import io
 from pathlib import Path
 from loguru import logger
 import sys
 sys.path.append('.')
 
+from src.config.paths import RAW_DATA_DIR, PROCESSED_DATA_DIR
 from streamlit_app.ui import render_page_header, render_section_card
+
+
+def _read_csv_with_encoding_fallback(source):
+    """读取CSV时自动尝试常见编码，避免UTF-8解码失败。"""
+    encodings = ["utf-8", "utf-8-sig", "gb18030", "gbk", "utf-16", "utf-16le", "utf-16be", "cp1252", "latin1"]
+    parse_errors = []
+    last_error = None
+
+    # 统一读取原始二进制，避免 UploadedFile 指针位置影响重试
+    if isinstance(source, (str, Path)):
+        raw_bytes = Path(source).read_bytes()
+    elif hasattr(source, "getvalue"):
+        raw_bytes = source.getvalue()
+    elif hasattr(source, "read"):
+        raw_bytes = source.read()
+        if hasattr(source, "seek"):
+            source.seek(0)
+    else:
+        raise TypeError("不支持的文件来源类型")
+
+    # 某些情况下文件扩展名是 .csv，但内容是 Excel 文件
+    if raw_bytes.startswith(b"PK"):
+        try:
+            df = pd.read_excel(io.BytesIO(raw_bytes))
+            return df, "excel(binary)"
+        except Exception:
+            pass
+
+    def _parse_csv_text(text: str):
+        """对已解码文本做多策略解析，兼容分隔符不一致与坏行。"""
+        strategies = [
+            # 自动嗅探分隔符（逗号/分号/制表符等）
+            {"sep": None, "engine": "python"},
+            # 显式常见分隔符
+            {"sep": ","},
+            {"sep": ";"},
+            {"sep": "\t"},
+            {"sep": "|"},
+            # 最后兜底：容错跳过坏行
+            {"sep": None, "engine": "python", "on_bad_lines": "skip"},
+            {"sep": ",", "engine": "python", "on_bad_lines": "skip"},
+            {"sep": ";", "engine": "python", "on_bad_lines": "skip"},
+            {"sep": "\t", "engine": "python", "on_bad_lines": "skip"},
+            {"sep": "|", "engine": "python", "on_bad_lines": "skip"},
+        ]
+
+        parse_last_error = None
+        for opts in strategies:
+            try:
+                df = pd.read_csv(io.StringIO(text), **opts)
+                if df is not None and len(df.columns) > 0:
+                    mode = (
+                        f"robust({opts.get('sep')}, skip_bad={opts.get('on_bad_lines') == 'skip'})"
+                    )
+                    return df, mode
+            except Exception as e:  # noqa: BLE001
+                parse_last_error = e
+                continue
+        raise ValueError(f"CSV结构解析失败: {parse_last_error}")
+
+    for enc in encodings:
+        try:
+            text = raw_bytes.decode(enc)
+            df, parse_mode = _parse_csv_text(text)
+            return df, f"{enc}, {parse_mode}"
+        except Exception as e:  # noqa: BLE001 - fallback chain
+            last_error = e
+            parse_errors.append(f"{enc}: {e}")
+            continue
+
+    raise ValueError(
+        "无法识别CSV编码或内容格式。"
+        f" 已尝试编码: {', '.join(encodings)}。最后错误: {last_error}。"
+        f" 详情: {' | '.join(parse_errors[:3])}"
+    )
+
+
+def _count_csv_rows_with_fallback(path: Path) -> int:
+    """按编码回退统计CSV行数。"""
+    encodings = ["utf-8", "utf-8-sig", "gb18030", "gbk", "latin1"]
+    for enc in encodings:
+        try:
+            with open(path, encoding=enc) as f:
+                return max(sum(1 for _ in f) - 1, 0)
+        except Exception:
+            continue
+    raise ValueError("无法读取CSV行数")
 
 
 def show_data_manager():
@@ -19,6 +108,7 @@ def show_data_manager():
     # ── Tab 1: 上传新数据 ──
     with tab_upload:
         with render_section_card("Upload SAP Files", "支持 CSV / Excel，拖拽或点击上传"):
+            st.caption("Upload Engine v3: 自动编码识别（UTF-8 / GB18030 / GBK / Latin1）")
             col1, col2 = st.columns(2)
 
             with col1:
@@ -47,7 +137,7 @@ def show_data_manager():
 
             loaded_count = 0
             raw_dfs = {}
-            data_dir = Path("data/raw")
+            data_dir = RAW_DATA_DIR
             data_dir.mkdir(parents=True, exist_ok=True)
 
             for name, file in uploaded.items():
@@ -55,16 +145,19 @@ def show_data_manager():
                     try:
                         if file.name.endswith('.xlsx'):
                             df = pd.read_excel(file)
+                            used_encoding = "excel"
                         else:
-                            df = pd.read_csv(file, encoding='utf-8')
+                            df, used_encoding = _read_csv_with_encoding_fallback(file)
                         # 保存到 data/raw/
                         save_path = data_dir / name
-                        df.to_csv(save_path, index=False, encoding='utf-8')
+                        df.to_csv(save_path, index=False, encoding='utf-8-sig')
                         raw_dfs[name] = df
                         loaded_count += 1
                         st.success(f"{name}: {len(df)} 行 x {len(df.columns)} 列")
+                        if used_encoding not in {"excel", "utf-8", "utf-8-sig"}:
+                            st.caption(f"{name} 已按 {used_encoding} 编码读取并转换为 UTF-8 存储")
                     except Exception as e:
-                        st.error(f"{name} 加载失败: {e}")
+                        st.error(f"[Upload Engine v3] {name} 加载失败: {e}")
 
             if loaded_count > 0:
                 st.session_state['raw_dataframes'] = raw_dfs
@@ -74,7 +167,7 @@ def show_data_manager():
     # ── Tab 2: 使用现有数据 ──
     with tab_existing:
         with render_section_card("Raw Data Folder", "从 data/raw 扫描并合并已有数据"):
-            data_dir = Path("data/raw")
+            data_dir = RAW_DATA_DIR
 
             if data_dir.exists():
                 csv_files = list(data_dir.glob("*.csv"))
@@ -84,7 +177,7 @@ def show_data_manager():
                         if f.name.startswith('.'):
                             continue
                         try:
-                            row_count = sum(1 for _ in open(f, encoding='utf-8')) - 1
+                            row_count = _count_csv_rows_with_fallback(f)
                         except Exception:
                             row_count = "?"
                         file_info.append({
@@ -98,12 +191,12 @@ def show_data_manager():
                     if st.button("加载并合并现有数据", type="primary", key="load_existing"):
                         _load_and_merge_existing()
                 else:
-                    st.warning("data/raw/ 目录中没有CSV文件")
+                    st.warning(f"{data_dir} 目录中没有CSV文件")
             else:
-                st.warning("data/raw/ 目录不存在")
+                st.warning(f"{data_dir} 目录不存在")
 
         with render_section_card("Processed Dataset", "直接载入已处理的数据快照"):
-            processed_dir = Path("data/processed")
+            processed_dir = PROCESSED_DATA_DIR
             if processed_dir.exists():
                 processed_files = list(processed_dir.glob("*.csv"))
                 if processed_files:
@@ -113,7 +206,7 @@ def show_data_manager():
                     )
                     if st.button("加载已处理数据", key="load_processed"):
                         try:
-                            df = pd.read_csv(processed_dir / selected, encoding='utf-8')
+                            df, _ = _read_csv_with_encoding_fallback(processed_dir / selected)
                             if 'planned_start_date' in df.columns:
                                 df['planned_start_date'] = pd.to_datetime(df['planned_start_date'])
                             if 'planned_finish_date' in df.columns:
@@ -161,7 +254,7 @@ def _load_and_merge_existing():
         from src.data_processing.aps_data_loader import APSDataLoader
 
         with st.spinner("正在加载和合并数据..."):
-            loader = APSDataLoader(data_dir="data/raw")
+            loader = APSDataLoader(data_dir=str(RAW_DATA_DIR))
             df = loader.load_and_merge()
 
             is_valid, errors = loader.validate_data(df)
@@ -185,7 +278,7 @@ def _load_and_merge_existing():
 
             # 加载MRP数据(如果存在)
             from src.data_collection.csv_loader import CSVLoader
-            csv_loader = CSVLoader(data_dir="data/raw")
+            csv_loader = CSVLoader(data_dir=str(RAW_DATA_DIR))
             mrp_dfs = {}
             for name, method in [
                 ('mrp_results.csv', csv_loader.load_mrp_results),

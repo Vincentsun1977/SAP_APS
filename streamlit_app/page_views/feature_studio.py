@@ -237,7 +237,7 @@ def _show_feature_analysis():
                     title="Top 特征相关性"
                 )
                 fig.update_layout(height=500)
-                st.plotly_chart(fig, width='stretch')
+                st.plotly_chart(fig, use_container_width=True)
 
         with col2:
             st.subheader("特征与标签关系")
@@ -254,7 +254,7 @@ def _show_feature_analysis():
                         color_discrete_map={0: '#4caf50', 1: '#f44336'}
                     )
                     fig.update_layout(height=500)
-                    st.plotly_chart(fig, width='stretch')
+                    st.plotly_chart(fig, use_container_width=True)
 
     with render_section_card("Feature Distribution", "特征分布形态与标签差异"):
         dist_feat = st.selectbox("选择特征查看分布", feature_cols, key="feat_dist_select")
@@ -267,4 +267,4 @@ def _show_feature_analysis():
                 title=f"{dist_feat} 分布"
             )
             fig.update_layout(height=350)
-            st.plotly_chart(fig, width='stretch')
+            st.plotly_chart(fig, use_container_width=True)

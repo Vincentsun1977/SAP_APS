@@ -6,14 +6,25 @@ import sys
 sys.path.append('.')
 
 import pandas as pd
+from pathlib import Path
+from typing import Optional, Union
 from src.models.xgboost_model import ProductionDelayModel
 from src.data_processing.aps_data_loader import APSDataLoader
 from src.data_processing.aps_feature_engineer import APSFeatureEngineer
+from src.config.paths import (
+    MODELS_DIR,
+    INFERENCE_OUTPUT_DIR,
+    get_latest_aps_model_path,
+)
 from loguru import logger
 from datetime import datetime
 
 
-def predict_new_orders(new_orders_csv: str, model_path: str, output_csv: str = None):
+def predict_new_orders(
+    new_orders_csv: Union[str, Path],
+    model_path: Optional[Union[str, Path]] = None,
+    output_csv: Optional[Union[str, Path]] = None,
+):
     """
     预测新订单的延迟风险
     
@@ -30,9 +41,13 @@ def predict_new_orders(new_orders_csv: str, model_path: str, output_csv: str = N
     logger.info("="*60)
     
     # 1. 加载模型
+    model_path = Path(model_path) if model_path else get_latest_aps_model_path()
+    if model_path is None:
+        raise FileNotFoundError(f"未找到模型文件，请先训练模型或检查目录: {MODELS_DIR}")
+
     logger.info(f"加载模型: {model_path}")
     model = ProductionDelayModel()
-    model.load(model_path)
+    model.load(str(model_path))
     
     # 2. 加载新订单数据
     logger.info(f"加载新订单数据: {new_orders_csv}")
@@ -95,8 +110,14 @@ def predict_new_orders(new_orders_csv: str, model_path: str, output_csv: str = N
     
     # 7. 保存结果
     if output_csv:
-        df_result.to_csv(output_csv, index=False, encoding='utf-8-sig')
-        logger.info(f"✓ 预测结果已保存: {output_csv}")
+        output_path = Path(output_csv)
+    else:
+        INFERENCE_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+        output_path = INFERENCE_OUTPUT_DIR / f"prediction_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    df_result.to_csv(output_path, index=False, encoding='utf-8-sig')
+    logger.info(f"✓ 预测结果已保存: {output_path}")
     
     return df_result
 
@@ -121,7 +142,7 @@ def get_recommendation(risk_level: str) -> str:
     return recommendations.get(risk_level, "正常跟踪")
 
 
-def predict_single_order(order_data: dict, model_path: str) -> dict:
+def predict_single_order(order_data: dict, model_path: Optional[Union[str, Path]] = None) -> dict:
     """
     预测单个订单
     
@@ -142,21 +163,43 @@ def predict_single_order(order_data: dict, model_path: str) -> dict:
             'line_capacity': 50,
             # ... 其他字段
         }
-        result = predict_single_order(order, 'models/aps_xgb_model.json')
+        result = predict_single_order(order)
     """
-    # 转换为DataFrame
+    model_path = Path(model_path) if model_path else get_latest_aps_model_path()
+    if model_path is None:
+        raise FileNotFoundError(f"未找到模型文件，请先训练模型或检查目录: {MODELS_DIR}")
+
+    model = ProductionDelayModel()
+    model.load(str(model_path))
+
+    engineer = APSFeatureEngineer(lookback_days=90)
     df = pd.DataFrame([order_data])
-    
-    # 预测
-    result_df = predict_new_orders(
-        new_orders_csv=df,  # 直接传入DataFrame
-        model_path=model_path
+    df['planned_start_date'] = pd.to_datetime(df['planned_start_date'])
+    df_features = engineer.transform(df)
+    feature_names = engineer.get_feature_names()
+    X = df_features[feature_names].fillna(0).values
+
+    delay_probability = float(model.predict_proba(X)[0, 1])
+    prediction = int(model.predict(X)[0])
+    risk_level = classify_risk(delay_probability)
+
+    result = order_data.copy()
+    result.update(
+        {
+            "delay_probability": delay_probability,
+            "prediction": prediction,
+            "risk_level": risk_level,
+            "recommendation": get_recommendation(risk_level),
+            "prediction_time": datetime.now().isoformat(),
+        }
     )
-    
-    return result_df.iloc[0].to_dict()
+    return result
 
 
-def batch_predict_with_monitoring(orders_csv: str, model_path: str):
+def batch_predict_with_monitoring(
+    orders_csv: Union[str, Path],
+    model_path: Optional[Union[str, Path]] = None,
+):
     """
     批量预测并输出监控报告
     
@@ -168,7 +211,7 @@ def batch_predict_with_monitoring(orders_csv: str, model_path: str):
     df_result = predict_new_orders(
         new_orders_csv=orders_csv,
         model_path=model_path,
-        output_csv=f"predictions_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        output_csv=None
     )
     
     # 生成监控报告

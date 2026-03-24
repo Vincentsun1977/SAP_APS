@@ -6,10 +6,10 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
-import glob
 import sys
 sys.path.append('.')
 
+from src.config.paths import get_aps_model_paths_str, get_latest_aps_model_path
 from streamlit_app.ui import render_page_header, render_section_card
 
 
@@ -66,19 +66,19 @@ def _show_overview():
         with col1:
             st.subheader("混淆矩阵")
             fig = render_confusion_matrix(metrics['confusion_matrix'])
-            st.plotly_chart(fig, width='stretch')
+            st.plotly_chart(fig, use_container_width=True)
 
         with col2:
             st.subheader("特征重要性 Top 15")
             fig = render_feature_importance(result.feature_importance)
-            st.plotly_chart(fig, width='stretch')
+            st.plotly_chart(fig, use_container_width=True)
 
         if result.y_val is not None:
             st.subheader("预测概率分布")
             y_proba = result.model.predict_proba(result.X_val)[:, 1]
             from streamlit_app.components.charts import render_prediction_distribution
             fig = render_prediction_distribution(y_proba, result.y_val)
-            st.plotly_chart(fig, width='stretch')
+            st.plotly_chart(fig, use_container_width=True)
 
 
 def _show_roc_pr():
@@ -98,11 +98,11 @@ def _show_roc_pr():
 
         with col1:
             fig = render_roc_curve(result.y_val, y_proba)
-            st.plotly_chart(fig, width='stretch')
+            st.plotly_chart(fig, use_container_width=True)
 
         with col2:
             fig = render_pr_curve(result.y_val, y_proba)
-            st.plotly_chart(fig, width='stretch')
+            st.plotly_chart(fig, use_container_width=True)
 
         st.subheader("阈值分析")
         st.caption("调整分类阈值观察指标变化")
@@ -184,7 +184,7 @@ def _show_sliced_evaluation():
                 yaxis_title="F1 Score",
                 height=400
             )
-            st.plotly_chart(fig, width='stretch')
+            st.plotly_chart(fig, use_container_width=True)
 
             st.dataframe(
                 sliced_df.style.format({
@@ -254,7 +254,7 @@ def _show_drift_monitoring():
                 xaxis_title="时间段", yaxis_title="指标值",
                 height=400, hovermode='x unified'
             )
-            st.plotly_chart(fig, width='stretch')
+            st.plotly_chart(fig, use_container_width=True)
 
             drift_result = detector.check_performance_drift(temporal_df, 'f1_score')
             if drift_result['is_drifting']:
@@ -285,7 +285,7 @@ def _show_drift_monitoring():
                 fig.add_hline(y=0.25, line_dash="dash", line_color="red", annotation_text="显著漂移阈值")
                 fig.add_hline(y=0.10, line_dash="dash", line_color="orange", annotation_text="轻微漂移阈值")
                 fig.update_layout(title="特征PSI分布", height=400, xaxis_tickangle=-45)
-                st.plotly_chart(fig, width='stretch')
+                st.plotly_chart(fig, use_container_width=True)
 
                 significant = drift_df[drift_df['status'] == '显著漂移']
                 if len(significant) > 0:
@@ -296,7 +296,7 @@ def _show_model_comparison():
     """模型对比"""
     st.subheader("模型版本对比")
 
-    model_files = sorted(glob.glob("models/aps_xgb_model_*.json"))
+    model_files = get_aps_model_paths_str()
 
     if len(model_files) < 2:
         st.info("需要至少2个模型版本才能进行对比。请多次训练后再使用此功能。")
@@ -366,7 +366,7 @@ def _show_model_comparison():
                 'Model A': (result_a.y_true, result_a.y_proba),
                 'Model B': (result_b.y_true, result_b.y_proba),
             })
-            st.plotly_chart(fig, width='stretch')
+            st.plotly_chart(fig, use_container_width=True)
 
 
 def _try_evaluate_from_data():
@@ -377,17 +377,15 @@ def _try_evaluate_from_data():
     if feature_df is None or not feature_cols:
         return
 
-    import glob as _glob
     from src.models.xgboost_model import ProductionDelayModel
     from src.training.training_pipeline import TrainingResult
 
-    model_files = _glob.glob("models/aps_xgb_model_*.json")
-    if not model_files:
+    latest = get_latest_aps_model_path()
+    if latest is None:
         return
 
-    latest = max(model_files)
     model = ProductionDelayModel()
-    model.load(latest)
+    model.load(str(latest))
 
     X = feature_df[feature_cols].values
     y = feature_df['is_delayed'].values
@@ -418,7 +416,7 @@ def _try_evaluate_from_data():
     result = TrainingResult(
         model=model.model,
         metrics=metrics,
-        model_path=latest,
+        model_path=str(latest),
         feature_names=feature_cols,
         feature_importance=importance_dict,
         train_samples=len(X_train),
@@ -432,4 +430,4 @@ def _try_evaluate_from_data():
     st.session_state['training_result'] = result
     st.session_state['trained_model'] = model.model
     st.session_state['model_trained'] = True
-    st.session_state['model_path'] = latest
+    st.session_state['model_path'] = str(latest)

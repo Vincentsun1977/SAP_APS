@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 from src.models.xgboost_model import ProductionDelayModel
 from src.data_processing.aps_feature_engineer import APSFeatureEngineer
+from src.config.paths import APS_TRAINING_DATA_PATH, get_latest_aps_model_path
 
 def print_header(title):
     """打印标题"""
@@ -29,7 +30,7 @@ print_header("🚀 SAP生产延迟预测模型 - 训练结果展示")
 # 1. 加载训练数据
 print("\n📊 正在加载训练数据...")
 try:
-    df = pd.read_csv("data/processed/aps_training_data_full.csv")
+    df = pd.read_csv(APS_TRAINING_DATA_PATH)
     print(f"   ✓ 成功加载 {len(df):,} 条历史生产订单")
     
     # 解析日期
@@ -87,7 +88,12 @@ for line, row in line_stats.iterrows():
 # 5. 加载模型
 print_header("🤖 加载训练模型")
 
-model_path = "models/aps_xgb_model_20251224_194431.json"
+latest_model_path = get_latest_aps_model_path()
+if latest_model_path is None:
+    print("   ✗ 未找到APS模型文件，请先运行训练脚本")
+    sys.exit(1)
+
+model_path = str(latest_model_path)
 try:
     model = ProductionDelayModel()
     model.load(model_path)
@@ -256,7 +262,7 @@ print(f"""
    
    📁 相关文件:
       • 模型文件: {model_path}
-      • 训练数据: data/processed/aps_training_data_full.csv
+      • 训练数据: {APS_TRAINING_DATA_PATH}
       • 训练脚本: scripts/train_aps_model.py
 """)
 

@@ -14,6 +14,7 @@ sys.path.append('.')
 from src.data_processing.aps_data_loader import APSDataLoader
 from src.data_processing.aps_feature_engineer import APSFeatureEngineer
 from src.models.xgboost_model import ProductionDelayModel
+from src.config.paths import APS_TRAINING_DATA_PATH, get_latest_aps_model_path
 
 # Page config
 st.set_page_config(
@@ -181,7 +182,7 @@ st.markdown("""
 def load_training_data():
     """加载训练数据"""
     try:
-        df = pd.read_csv("data/processed/aps_training_data_full.csv")
+        df = pd.read_csv(APS_TRAINING_DATA_PATH)
         df['planned_start_date'] = pd.to_datetime(df['planned_start_date'])
         return df
     except:
@@ -191,20 +192,18 @@ def load_training_data():
 @st.cache_resource
 def load_aps_model():
     """加载APS模型"""
-    import glob
-    model_files = glob.glob("models/aps_xgb_model_*.json")
-    if not model_files:
+    latest_model = get_latest_aps_model_path()
+    if latest_model is None:
         return None
-    
-    latest_model = max(model_files)
+
     model = ProductionDelayModel()
-    model.load(latest_model)
+    model.load(str(latest_model))
     
     # 设置特征名称
     engineer = APSFeatureEngineer()
     model.feature_names = engineer.get_feature_names()
     
-    return model, latest_model
+    return model, str(latest_model)
 
 
 def main():
@@ -345,7 +344,7 @@ def show_dashboard(df, model):
         )
         fig.update_traces(textposition='inside', textinfo='percent+label+value')
         fig.update_layout(height=350)
-        st.plotly_chart(fig, width='stretch')
+        st.plotly_chart(fig, use_container_width=True)
     
     with col2:
         # 延迟天数分布
@@ -360,7 +359,7 @@ def show_dashboard(df, model):
         )
         fig.add_vline(x=0, line_dash="dash", line_color="red", annotation_text="准时基准")
         fig.update_layout(height=350)
-        st.plotly_chart(fig, width='stretch')
+        st.plotly_chart(fig, use_container_width=True)
     
     # 月度趋势
     st.subheader("📅 月度延迟趋势")
@@ -393,7 +392,7 @@ def show_dashboard(df, model):
         hovermode='x unified',
         height=400
     )
-    st.plotly_chart(fig, width='stretch')
+    st.plotly_chart(fig, use_container_width=True)
     
     # Top物料
     st.subheader("🏆 生产量Top 10物料")
@@ -406,7 +405,7 @@ def show_dashboard(df, model):
         color_continuous_scale='Blues'
     )
     fig.update_layout(height=350, showlegend=False)
-    st.plotly_chart(fig, width='stretch')
+    st.plotly_chart(fig, use_container_width=True)
 
 
 def show_model_performance(df, model):
@@ -457,7 +456,7 @@ def show_model_performance(df, model):
             showscale=False
         ))
         fig.update_layout(height=400)
-        st.plotly_chart(fig, width='stretch')
+        st.plotly_chart(fig, use_container_width=True)
         
         # 详细统计
         tn, fp, fn, tp = cm[0][0], cm[0][1], cm[1][0], cm[1][1]
@@ -491,7 +490,7 @@ def show_model_performance(df, model):
             yaxis={'categoryorder': 'total ascending'},
             xaxis_title="重要性分数"
         )
-        st.plotly_chart(fig, width='stretch')
+        st.plotly_chart(fig, use_container_width=True)
     
     # 预测概率分布
     st.subheader("预测概率分布")
@@ -519,7 +518,7 @@ def show_model_performance(df, model):
         yaxis_title='订单数',
         height=350
     )
-    st.plotly_chart(fig, width='stretch')
+    st.plotly_chart(fig, use_container_width=True)
 
 
 def show_prediction(df, model):
@@ -594,7 +593,7 @@ def show_prediction(df, model):
                     }
                 ))
                 fig.update_layout(height=200, margin=dict(l=20, r=20, t=40, b=20))
-                st.plotly_chart(fig, width='stretch')
+                st.plotly_chart(fig, use_container_width=True)
             
             with col3:
                 st.markdown(f"""
@@ -675,7 +674,7 @@ def show_risk_materials(df):
                 labels={'延迟率': '延迟率'}
             )
             fig.update_layout(height=400, yaxis={'categoryorder': 'total ascending'})
-            st.plotly_chart(fig, width='stretch')
+            st.plotly_chart(fig, use_container_width=True)
         
         with col2:
             st.subheader("订单量 vs 延迟率")
@@ -689,7 +688,7 @@ def show_risk_materials(df):
                 color_continuous_scale='RdYlGn_r'
             )
             fig.update_layout(height=400)
-            st.plotly_chart(fig, width='stretch')
+            st.plotly_chart(fig, use_container_width=True)
     else:
         st.success("✅ 未发现符合条件的高风险物料")
 
@@ -731,7 +730,7 @@ def show_trends(df):
             labels={'value': '订单数', 'variable': '类型'}
         )
         fig.update_layout(height=350)
-        st.plotly_chart(fig, width='stretch')
+        st.plotly_chart(fig, use_container_width=True)
     
     with col2:
         st.subheader("延迟率趋势")
@@ -745,7 +744,7 @@ def show_trends(df):
         fig.add_hline(y=period_stats['延迟率'].mean(), line_dash="dash",
                      annotation_text=f"平均: {period_stats['延迟率'].mean():.1f}%")
         fig.update_layout(height=350)
-        st.plotly_chart(fig, width='stretch')
+        st.plotly_chart(fig, use_container_width=True)
     
     # 生产量与延迟关系
     st.subheader("生产负载 vs 延迟率")
@@ -759,7 +758,7 @@ def show_trends(df):
         color_continuous_scale='RdYlGn_r'
     )
     fig.update_layout(height=400)
-    st.plotly_chart(fig, width='stretch')
+    st.plotly_chart(fig, use_container_width=True)
     
     # 详细表格
     st.subheader("详细统计数据")

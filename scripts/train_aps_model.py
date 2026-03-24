@@ -9,6 +9,7 @@ from src.data_processing.aps_data_loader import APSDataLoader
 from src.data_processing.aps_feature_engineer import APSFeatureEngineer
 from src.models.xgboost_model import ProductionDelayModel
 from src.database.connection import db
+from src.config.paths import RAW_DATA_DIR, MODELS_DIR, APS_TRAINING_DATA_PATH
 from loguru import logger
 import pandas as pd
 import numpy as np
@@ -24,7 +25,7 @@ def main():
     
     # 1. Load and merge APS data
     logger.info("Step 1: Loading and merging APS data files")
-    loader =APSDataLoader(data_dir="data/raw")
+    loader = APSDataLoader(data_dir=str(RAW_DATA_DIR))
     df_merged = loader.load_and_merge()
     
     # Validate merged data
@@ -125,8 +126,8 @@ def main():
     # 7. Save model
     logger.info("\nStep 7: Saving model")
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    model_path = f"models/aps_xgb_model_{timestamp}.json"
-    model.save(model_path)
+    model_path = MODELS_DIR / f"aps_xgb_model_{timestamp}.json"
+    model.save(str(model_path))
     
     # 8. Save metadata to Supabase
     logger.info("Step 8: Saving model metadata")
@@ -149,7 +150,7 @@ def main():
         "date_range_end": df_merged['planned_start_date'].max().isoformat(),
         "feature_importance": {k: float(v) for k, v in sorted_importance[:20]},  # Top 20
         "hyperparameters": model.params,
-        "model_path": model_path,
+        "model_path": str(model_path),
         "is_active": True
     }
     
@@ -162,7 +163,7 @@ def main():
     
     # 9. Save processed data for future use
     logger.info("Step 9: Saving processed data")
-    loader.save_processed_data(df_features, "data/processed/aps_training_data_full.csv")
+    loader.save_processed_data(df_features, str(APS_TRAINING_DATA_PATH))
     
     logger.info("\n" + "="*60)
     logger.info("✅ Training complete!")

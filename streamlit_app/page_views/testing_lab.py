@@ -139,7 +139,7 @@ def _show_single_prediction():
                 with col_r1:
                     from streamlit_app.components.charts import render_gauge
                     fig = render_gauge(proba, "延迟概率", height=250)
-                    st.plotly_chart(fig, width='stretch')
+                    st.plotly_chart(fig, use_container_width=True)
 
                 with col_r2:
                     if proba >= 0.7:
@@ -195,7 +195,7 @@ def _show_batch_test():
 
                 from streamlit_app.components.charts import render_prediction_distribution
                 fig = render_prediction_distribution(y_proba, y_val)
-                st.plotly_chart(fig, width='stretch')
+                st.plotly_chart(fig, use_container_width=True)
 
                 st.session_state['test_y_true'] = y_val
                 st.session_state['test_y_pred'] = y_pred
@@ -283,4 +283,4 @@ def _show_error_analysis():
             color_discrete_sequence=['#3498db']
         )
         fig.update_layout(height=300)
-        st.plotly_chart(fig, width='stretch')
+        st.plotly_chart(fig, use_container_width=True)

@@ -110,7 +110,7 @@ def render_missing_heatmap(df: pd.DataFrame, height=300):
         yaxis_title="缺失率 (%)",
         height=height
     )
-    st.plotly_chart(fig, width='stretch')
+    st.plotly_chart(fig, use_container_width=True)
 
 
 def render_column_distribution(df: pd.DataFrame, column: str, height=300):
@@ -131,4 +131,4 @@ def render_column_distribution(df: pd.DataFrame, column: str, height=300):
             color_discrete_sequence=['#3498db']
         )
     fig.update_layout(height=height)
-    st.plotly_chart(fig, width='stretch')
+    st.plotly_chart(fig, use_container_width=True)

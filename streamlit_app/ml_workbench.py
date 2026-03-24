@@ -8,6 +8,65 @@ sys.path.append('.')
 
 from streamlit_app.sidebar_theme import apply_sidebar_theme
 
+
+def _patch_plotly_chart_api():
+    """
+    兼容旧版 st.plotly_chart 参数，避免 Streamlit 1.50 的 kwargs deprecation warning。
+    - width='stretch' -> use_container_width=True
+    - 旧Plotly配置参数 -> 合并到 config={}
+    """
+    original_plotly_chart = st.plotly_chart
+
+    if getattr(original_plotly_chart, "__name__", "") == "_plotly_chart_compat":
+        return
+
+    def _plotly_chart_compat(figure_or_data, *args, **kwargs):
+        width = kwargs.pop("width", None)
+        use_container_width = kwargs.pop("use_container_width", None)
+        if use_container_width is None:
+            use_container_width = (width == "stretch") if width is not None else True
+
+        config = dict(kwargs.pop("config", {}) or {})
+        deprecated_config_keys = [
+            "displayModeBar",
+            "scrollZoom",
+            "editable",
+            "showLink",
+            "linkText",
+            "toImageButtonOptions",
+            "modeBarButtonsToRemove",
+            "modeBarButtonsToAdd",
+            "displaylogo",
+        ]
+        for key in deprecated_config_keys:
+            if key in kwargs:
+                config[key] = kwargs.pop(key)
+
+        theme = kwargs.pop("theme", "streamlit")
+        key = kwargs.pop("key", None)
+        on_select = kwargs.pop("on_select", "ignore")
+        selection_mode = kwargs.pop("selection_mode", ("points", "box", "lasso"))
+
+        # 任何剩余未知参数都并入config，避免触发Streamlit kwargs弃用告警
+        if kwargs:
+            config.update(kwargs)
+
+        return original_plotly_chart(
+            figure_or_data,
+            use_container_width=use_container_width,
+            theme=theme,
+            key=key,
+            on_select=on_select,
+            selection_mode=selection_mode,
+            config=config or None,
+        )
+
+    _plotly_chart_compat.__name__ = "_plotly_chart_compat"
+    st.plotly_chart = _plotly_chart_compat
+
+
+_patch_plotly_chart_api()
+
 # Page config - 必须在最前面
 st.set_page_config(
     page_title="SAP Production ML Workbench",
@@ -36,9 +95,6 @@ st.markdown("""
         font-family: "Plus Jakarta Sans", "Manrope", "DM Sans", sans-serif;
         background: linear-gradient(180deg, #f7f9fd 0%, var(--studio-bg) 100%);
         color: var(--studio-ink);
-    }
-    .stApp * {
-        font-family: inherit;
     }
     .block-container {
         padding-top: 1.4rem;
@@ -135,7 +191,7 @@ st.markdown("""
         margin-bottom: 1.1rem;
     }
     .workbench-status {
-        margin-top: 1.25rem;
+        margin-top: 0.45rem;
         padding: 1rem 1rem 0.9rem 1rem;
         border: 1px solid var(--studio-border);
         border-radius: 12px;
@@ -152,6 +208,36 @@ st.markdown("""
         font-size: 0.74rem;
         font-weight: 800;
         letter-spacing: 0.14em;
+    }
+    .status-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+        flex: 0 0 8px;
+    }
+    .status-dot-ready {
+        background: #16a34a;
+    }
+    .status-dot-pending {
+        background: #a8b1bf;
+    }
+    .sidebar-settings-divider {
+        margin-top: 0.95rem;
+        margin-bottom: 0.75rem;
+        border-top: 1px solid var(--studio-border);
+    }
+    .sidebar-settings-title {
+        color: var(--studio-muted);
+        font-size: 0.74rem;
+        font-weight: 800;
+        letter-spacing: 0.14em;
+        margin-bottom: 0.45rem;
     }
     .studio-shell {
         display: flex;
@@ -311,20 +397,6 @@ st.markdown("""
 def main():
     apply_sidebar_theme(title="Workspace", subtitle="Machine Learning")
 
-    st.markdown(
-        """
-        <div class="studio-shell">
-            <div>
-                <div class="studio-kicker">Workspace Console</div>
-                <p class="studio-title">SAP Production ML Workbench</p>
-                <div class="studio-copy">统一管理数据、特征、训练、测试与生产预测分析。</div>
-            </div>
-            <div class="studio-badge">Model ops console</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
     nav_items = [
         ("production_dashboard", ":material/dashboard:  Apps Dashboard"),
         ("data_manager", ":material/folder_open:  Data Manager"),
@@ -353,17 +425,23 @@ def main():
     features_ready = st.session_state.get('features_ready', False)
     model_ready = st.session_state.get('model_trained', False)
 
+    st.sidebar.markdown('<div class="workbench-subtitle">PIPELINE STATUS</div>', unsafe_allow_html=True)
+
     st.sidebar.markdown(
         f"""
         <div class="workbench-status">
-            <div class="workbench-subtitle">PIPELINE STATUS</div>
-            <div>{'●' if data_ready else '○'} 数据已加载</div>
-            <div>{'●' if features_ready else '○'} 特征已生成</div>
-            <div>{'●' if model_ready else '○'} 模型已训练</div>
+            <div class="status-row"><span class="status-dot {'status-dot-ready' if data_ready else 'status-dot-pending'}"></span><span>数据已加载</span></div>
+            <div class="status-row"><span class="status-dot {'status-dot-ready' if features_ready else 'status-dot-pending'}"></span><span>特征已生成</span></div>
+            <div class="status-row"><span class="status-dot {'status-dot-ready' if model_ready else 'status-dot-pending'}"></span><span>模型已训练</span></div>
         </div>
         """,
         unsafe_allow_html=True,
     )
+
+    st.sidebar.markdown('<div class="sidebar-settings-divider"></div>', unsafe_allow_html=True)
+    st.sidebar.markdown('<div class="sidebar-settings-title">SETTINGS</div>', unsafe_allow_html=True)
+    st.sidebar.text_input("File Path", key="settings_file_path", placeholder="e.g. data/raw")
+    st.sidebar.text_input("SAP", key="settings_sap", placeholder="e.g. SAP ECC / S4")
 
     # 页面路由
     page_key = st.session_state.active_page

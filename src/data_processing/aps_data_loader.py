@@ -7,11 +7,13 @@ from pathlib import Path
 from loguru import logger
 from typing import Tuple, Optional
 
+from src.config.paths import RAW_DATA_DIR, PROCESSED_DATA_DIR
+
 
 class APSDataLoader:
     """Load and merge APS system data files"""
     
-    def __init__(self, data_dir: str = "data/raw"):
+    def __init__(self, data_dir: str = str(RAW_DATA_DIR)):
         """
         Initialize data loader
         
@@ -317,7 +319,7 @@ class APSDataLoader:
         
         return is_valid, errors
     
-    def save_processed_data(self, df: pd.DataFrame, output_path: str = "data/processed/training_data.csv"):
+    def save_processed_data(self, df: pd.DataFrame, output_path: str = str(PROCESSED_DATA_DIR / "training_data.csv")):
         """
         Save processed data to CSV
         
@@ -334,7 +336,7 @@ class APSDataLoader:
 
 if __name__ == "__main__":
     # Test the loader
-    loader = APSDataLoader("data/raw")
+    loader = APSDataLoader(str(RAW_DATA_DIR))
     df = loader.load_and_merge()
     
     # Validate

@@ -233,16 +233,16 @@ def _show_training_monitor():
         with col1:
             if result.train_loss and result.val_loss:
                 fig = render_training_curves(result.train_loss, result.val_loss, "LogLoss")
-                st.plotly_chart(fig, width='stretch')
+                st.plotly_chart(fig, use_container_width=True)
 
         with col2:
             if result.train_auc and result.val_auc:
                 fig = render_training_curves(result.train_auc, result.val_auc, "AUC")
-                st.plotly_chart(fig, width='stretch')
+                st.plotly_chart(fig, use_container_width=True)
 
         if result.train_error and result.val_error:
             fig = render_training_curves(result.train_error, result.val_error, "Error Rate")
-            st.plotly_chart(fig, width='stretch')
+            st.plotly_chart(fig, use_container_width=True)
 
     # Optuna trial可视化
     if st.session_state.get('optuna_trials'):
@@ -259,7 +259,7 @@ def _show_training_monitor():
             fig.add_hline(y=trials_df['auc'].max(), line_dash="dash",
                           annotation_text=f"Best: {trials_df['auc'].max():.4f}")
             fig.update_layout(title="调参试验AUC变化", xaxis_title="Trial", yaxis_title="AUC", height=350)
-            st.plotly_chart(fig, width='stretch')
+            st.plotly_chart(fig, use_container_width=True)
 
 
 def _show_training_result():
@@ -292,7 +292,7 @@ def _show_training_result():
         with col1:
             cm = metrics['confusion_matrix']
             fig = render_confusion_matrix(cm)
-            st.plotly_chart(fig, width='stretch')
+            st.plotly_chart(fig, use_container_width=True)
 
             tn, fp, fn, tp = cm[0][0], cm[0][1], cm[1][0], cm[1][1]
             st.info(f"""
@@ -302,7 +302,7 @@ def _show_training_result():
 
         with col2:
             fig = render_feature_importance(result.feature_importance)
-            st.plotly_chart(fig, width='stretch')
+            st.plotly_chart(fig, use_container_width=True)
 
     with render_section_card("Model Info", "模型文件与样本规模"):
         col1, col2, col3, col4 = st.columns(4)
