@@ -157,7 +157,7 @@ def show_data_overview(df):
             title="订单状态",
             color_discrete_sequence=px.colors.qualitative.Set3
         )
-        st.plotly_chart(fig_status, use_container_width=True)
+        st.plotly_chart(fig_status, width='stretch')
     
     with col2:
         st.subheader("工厂分布")
@@ -170,11 +170,11 @@ def show_data_overview(df):
             color=plant_counts.values,
             color_continuous_scale='Blues'
         )
-        st.plotly_chart(fig_plant, use_container_width=True)
+        st.plotly_chart(fig_plant, width='stretch')
     
     # Data table
     st.subheader("📋 原始数据")
-    st.dataframe(df, use_container_width=True, height=400)
+    st.dataframe(df, width='stretch', height=400)
 
 
 def show_prediction(df, model):
@@ -259,7 +259,7 @@ def show_prediction(df, model):
                         }
                     ))
                     fig.update_layout(height=250)
-                    st.plotly_chart(fig, use_container_width=True, key=f"gauge_{row['order_id']}")
+                    st.plotly_chart(fig, width='stretch', key=f"gauge_{row['order_id']}")
                 
                 # Recommendations
                 if row['delay_proba'] >= 0.7:
@@ -324,7 +324,7 @@ def show_historical_analysis(df):
             title="订单交付情况",
             color_discrete_map={'按时': 'green', '延期': 'red'}
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
     
     with col2:
         st.subheader("延期天数分布")
@@ -336,7 +336,7 @@ def show_historical_analysis(df):
             labels={'delay_days': '延期天数', 'count': '订单数'},
             color_discrete_sequence=['coral']
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
     
     # Material analysis
     st.subheader("物料延期分析")
@@ -346,7 +346,7 @@ def show_historical_analysis(df):
     material_delay.columns = ['延期数', '总订单数', '延期率']
     material_delay = material_delay.sort_values('延期率', ascending=False)
     
-    st.dataframe(material_delay, use_container_width=True)
+    st.dataframe(material_delay, width='stretch')
     
     # Plant analysis
     st.subheader("工厂延期分析")
@@ -364,7 +364,7 @@ def show_historical_analysis(df):
         color='延期率',
         color_continuous_scale='Reds'
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
 
 
 def show_about():

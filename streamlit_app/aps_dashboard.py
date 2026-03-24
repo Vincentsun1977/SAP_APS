@@ -26,12 +26,36 @@ st.set_page_config(
 # Custom CSS
 st.markdown("""
 <style>
+    :root {
+        --paper: #f6f1e8;
+        --paper-strong: #efe7da;
+        --ink: #1f2933;
+        --muted: #6b7280;
+        --line: rgba(31, 41, 51, 0.14);
+        --accent: #c46f4e;
+        --accent-soft: rgba(196, 111, 78, 0.12);
+        --shadow: 0 14px 34px rgba(76, 58, 42, 0.08);
+    }
+
+    html, body, [class*="css"] {
+        font-family: "Avenir Next", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+        color: var(--ink);
+    }
+
+    .stApp {
+        background:
+            radial-gradient(circle at top left, rgba(255, 255, 255, 0.88), transparent 32%),
+            linear-gradient(180deg, #fbf8f2 0%, #f3ede4 100%);
+    }
+
     .main-header {
+        font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
         font-size: 3rem;
-        font-weight: bold;
-        color: #1f77b4;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        color: var(--ink);
         text-align: center;
-        margin-bottom: 1rem;
+        margin-bottom: 0.6rem;
     }
     .metric-card {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -54,6 +78,100 @@ st.markdown("""
         background-color: #e8f5e9;
         border-left: 4px solid #4caf50;
         padding: 10px;
+    }
+    .sub-header-note {
+        text-align: center;
+        color: var(--muted);
+        font-size: 0.92rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        margin-bottom: 1.8rem;
+    }
+    .sidebar-shell {
+        padding: 0.2rem 0 0.6rem 0;
+    }
+    .sidebar-kicker {
+        font-size: 0.72rem;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 0.5rem;
+        font-weight: 700;
+    }
+    .sidebar-title {
+        font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+        font-size: 1.55rem;
+        line-height: 1.2;
+        color: var(--ink);
+        margin-bottom: 0.45rem;
+    }
+    .sidebar-copy {
+        color: var(--muted);
+        font-size: 0.92rem;
+        line-height: 1.65;
+        margin-bottom: 1.25rem;
+    }
+    .sidebar-divider {
+        height: 1px;
+        background: linear-gradient(90deg, transparent, var(--line), transparent);
+        margin: 0.8rem 0 1.15rem 0;
+    }
+    .system-card {
+        background: rgba(255, 252, 247, 0.86);
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        padding: 1rem 1rem 0.85rem 1rem;
+        box-shadow: var(--shadow);
+    }
+    section[data-testid="stSidebar"] {
+        background:
+            linear-gradient(180deg, rgba(255,255,255,0.84) 0%, rgba(245,239,229,0.97) 100%);
+        border-right: 1px solid rgba(31, 41, 51, 0.08);
+    }
+    section[data-testid="stSidebar"] .block-container {
+        padding-top: 2rem;
+        padding-left: 1.2rem;
+        padding-right: 1.2rem;
+    }
+    section[data-testid="stSidebar"] [data-testid="stRadio"] > div {
+        gap: 0.72rem;
+    }
+    section[data-testid="stSidebar"] [data-testid="stRadio"] label {
+        background: rgba(255, 252, 247, 0.82);
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        padding: 0.95rem 1rem;
+        min-height: 84px;
+        align-items: flex-start;
+        box-shadow: 0 10px 24px rgba(69, 49, 35, 0.04);
+        transition: all 0.18s ease;
+    }
+    section[data-testid="stSidebar"] [data-testid="stRadio"] label:hover {
+        border-color: rgba(196, 111, 78, 0.45);
+        background: #fffdfa;
+        transform: translateY(-1px);
+    }
+    section[data-testid="stSidebar"] [data-testid="stRadio"] label > div:first-child {
+        display: none;
+    }
+    section[data-testid="stSidebar"] [data-testid="stRadio"] label p {
+        font-size: 0.98rem;
+        line-height: 1.55;
+        color: var(--ink);
+        white-space: pre-line;
+    }
+    section[data-testid="stSidebar"] [data-testid="stRadio"] label[data-checked="true"] {
+        background: linear-gradient(180deg, #fffaf2 0%, #f8efe3 100%);
+        border-color: rgba(196, 111, 78, 0.65);
+        box-shadow: 0 16px 30px rgba(196, 111, 78, 0.12);
+    }
+    section[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {
+        color: var(--ink);
+    }
+    section[data-testid="stSidebar"] .stInfo {
+        background: transparent;
+        border: none;
+        padding: 0;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -92,17 +210,38 @@ def load_aps_model():
 def main():
     # 标题
     st.markdown('<h1 class="main-header">📊 SAP生产延迟预测Dashboard</h1>', unsafe_allow_html=True)
+    st.markdown('<p class="sub-header-note">Production Intelligence Atlas</p>', unsafe_allow_html=True)
     st.markdown("---")
     
     # 侧边栏
-    st.sidebar.title("🎛️ 控制面板")
-    st.sidebar.markdown("###  导航菜单")
-    
-    page = st.sidebar.radio(
-        "",
-        ["🏠 总览Dashboard", "📊 模型性能", "🔮 实时预测", "⚠️ 风险物料", "📈 趋势分析"],
+    st.sidebar.markdown(
+        """
+        <div class="sidebar-shell">
+            <div class="sidebar-kicker">Workflow Navigator</div>
+            <div class="sidebar-title">功能页导览</div>
+            <div class="sidebar-copy">
+                从全局概览进入，再逐步查看模型、预测、风险与趋势。
+            </div>
+            <div class="sidebar-divider"></div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    page_options = {
+        "Step 01  ◌\n总览Dashboard": "🏠 总览Dashboard",
+        "Step 02  ◔\n模型性能": "📊 模型性能",
+        "Step 03  ✦\n实时预测": "🔮 实时预测",
+        "Step 04  △\n风险物料": "⚠️ 风险物料",
+        "Step 05  ↗\n趋势分析": "📈 趋势分析",
+    }
+
+    selected_page = st.sidebar.radio(
+        "功能页步骤",
+        list(page_options.keys()),
         label_visibility="collapsed"
     )
+    page = page_options[selected_page]
     
     # 加载数据和模型
     df = load_training_data()
@@ -119,14 +258,19 @@ def main():
     model, model_path = model_info
     
     # 侧边栏信息
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("### 📌 系统信息")
-    st.sidebar.info(f"""
-    **数据量**: {len(df):,} 条订单  
-    **时间范围**: {df['planned_start_date'].min().date()} 至 {df['planned_start_date'].max().date()}  
-    **模型**: APS XGBoost  
-    **特征数**: 36
-    """)
+    st.sidebar.markdown('<div class="sidebar-divider"></div>', unsafe_allow_html=True)
+    st.sidebar.markdown("##### 系统信息")
+    st.sidebar.markdown(
+        f"""
+        <div class="system-card">
+            <p><strong>数据量</strong>: {len(df):,} 条订单</p>
+            <p><strong>时间范围</strong>: {df['planned_start_date'].min().date()} 至 {df['planned_start_date'].max().date()}</p>
+            <p><strong>模型</strong>: APS XGBoost</p>
+            <p><strong>特征数</strong>: 36</p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
     
     # 页面路由
     if page == "🏠 总览Dashboard":
@@ -201,7 +345,7 @@ def show_dashboard(df, model):
         )
         fig.update_traces(textposition='inside', textinfo='percent+label+value')
         fig.update_layout(height=350)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
     
     with col2:
         # 延迟天数分布
@@ -216,7 +360,7 @@ def show_dashboard(df, model):
         )
         fig.add_vline(x=0, line_dash="dash", line_color="red", annotation_text="准时基准")
         fig.update_layout(height=350)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
     
     # 月度趋势
     st.subheader("📅 月度延迟趋势")
@@ -249,7 +393,7 @@ def show_dashboard(df, model):
         hovermode='x unified',
         height=400
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
     
     # Top物料
     st.subheader("🏆 生产量Top 10物料")
@@ -262,7 +406,7 @@ def show_dashboard(df, model):
         color_continuous_scale='Blues'
     )
     fig.update_layout(height=350, showlegend=False)
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
 
 
 def show_model_performance(df, model):
@@ -313,7 +457,7 @@ def show_model_performance(df, model):
             showscale=False
         ))
         fig.update_layout(height=400)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
         
         # 详细统计
         tn, fp, fn, tp = cm[0][0], cm[0][1], cm[1][0], cm[1][1]
@@ -347,7 +491,7 @@ def show_model_performance(df, model):
             yaxis={'categoryorder': 'total ascending'},
             xaxis_title="重要性分数"
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
     
     # 预测概率分布
     st.subheader("预测概率分布")
@@ -375,7 +519,7 @@ def show_model_performance(df, model):
         yaxis_title='订单数',
         height=350
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
 
 
 def show_prediction(df, model):
@@ -450,7 +594,7 @@ def show_prediction(df, model):
                     }
                 ))
                 fig.update_layout(height=200, margin=dict(l=20, r=20, t=40, b=20))
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width='stretch')
             
             with col3:
                 st.markdown(f"""
@@ -512,7 +656,7 @@ def show_risk_materials(df):
         
         st.dataframe(
             high_risk_display,
-            use_container_width=True,
+            width='stretch',
             height=400
         )
         
@@ -531,7 +675,7 @@ def show_risk_materials(df):
                 labels={'延迟率': '延迟率'}
             )
             fig.update_layout(height=400, yaxis={'categoryorder': 'total ascending'})
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
         
         with col2:
             st.subheader("订单量 vs 延迟率")
@@ -545,7 +689,7 @@ def show_risk_materials(df):
                 color_continuous_scale='RdYlGn_r'
             )
             fig.update_layout(height=400)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
     else:
         st.success("✅ 未发现符合条件的高风险物料")
 
@@ -587,7 +731,7 @@ def show_trends(df):
             labels={'value': '订单数', 'variable': '类型'}
         )
         fig.update_layout(height=350)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
     
     with col2:
         st.subheader("延迟率趋势")
@@ -601,7 +745,7 @@ def show_trends(df):
         fig.add_hline(y=period_stats['延迟率'].mean(), line_dash="dash",
                      annotation_text=f"平均: {period_stats['延迟率'].mean():.1f}%")
         fig.update_layout(height=350)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
     
     # 生产量与延迟关系
     st.subheader("生产负载 vs 延迟率")
@@ -615,11 +759,11 @@ def show_trends(df):
         color_continuous_scale='RdYlGn_r'
     )
     fig.update_layout(height=400)
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
     
     # 详细表格
     st.subheader("详细统计数据")
-    st.dataframe(period_stats, use_container_width=True, height=300)
+    st.dataframe(period_stats, width='stretch', height=300)
 
 
 if __name__ == "__main__":

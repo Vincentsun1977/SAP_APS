@@ -74,6 +74,50 @@ class CSVLoader:
         
         return df
     
+    def load_mrp_results(self, filename: str = "mrp_results.csv") -> Optional[pd.DataFrame]:
+        """加载MRP运行结果 (MD04)"""
+        filepath = self.data_dir / filename
+        if not filepath.exists():
+            logger.warning(f"MRP results file not found: {filepath}")
+            return None
+        df = pd.read_csv(filepath, encoding='utf-8-sig')
+        logger.info(f"Loaded {len(df)} MRP result records")
+        return df
+
+    def load_purchase_orders(self, filename: str = "purchase_orders.csv") -> Optional[pd.DataFrame]:
+        """加载采购订单数据 (ME2M)"""
+        filepath = self.data_dir / filename
+        if not filepath.exists():
+            logger.warning(f"Purchase orders file not found: {filepath}")
+            return None
+        df = pd.read_csv(filepath, encoding='utf-8-sig')
+        date_cols = ['delivery_date', 'actual_delivery', 'Delivery Date', 'Actual Delivery']
+        for col in date_cols:
+            if col in df.columns:
+                df[col] = pd.to_datetime(df[col], errors='coerce')
+        logger.info(f"Loaded {len(df)} purchase order records")
+        return df
+
+    def load_bom_data(self, filename: str = "bom_data.csv") -> Optional[pd.DataFrame]:
+        """加载BOM数据 (CS13)"""
+        filepath = self.data_dir / filename
+        if not filepath.exists():
+            logger.warning(f"BOM data file not found: {filepath}")
+            return None
+        df = pd.read_csv(filepath, encoding='utf-8-sig')
+        logger.info(f"Loaded {len(df)} BOM records")
+        return df
+
+    def load_stock_levels(self, filename: str = "stock_levels.csv") -> Optional[pd.DataFrame]:
+        """加载库存数据 (MMBE)"""
+        filepath = self.data_dir / filename
+        if not filepath.exists():
+            logger.warning(f"Stock levels file not found: {filepath}")
+            return None
+        df = pd.read_csv(filepath, encoding='utf-8-sig')
+        logger.info(f"Loaded {len(df)} stock records")
+        return df
+
     def validate_orders(self, df: pd.DataFrame) -> tuple[bool, list[str]]:
         """
         Validate production orders data
