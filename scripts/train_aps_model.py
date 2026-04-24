@@ -128,8 +128,8 @@ def main():
     model_path = f"models/aps_xgb_model_{timestamp}.pkl"
     model.save(model_path)
     
-    # 8. Save metadata to Supabase
-    logger.info("Step 8: Saving model metadata")
+    # 8. Save metadata to PostgreSQL
+    logger.info("Step 8: Saving model metadata to PostgreSQL")
     metadata = {
         "model_version": f"aps_v1.0_{timestamp}",
         "algorithm": "XGBoost",
@@ -155,9 +155,9 @@ def main():
     
     try:
         db.save_model_metadata(metadata)
-        logger.info("✓ Metadata saved to Supabase")
+        logger.info("✓ Metadata saved to PostgreSQL")
     except Exception as e:
-        logger.warning(f"Failed to save metadata to Supabase: {e}")
+        logger.warning(f"Failed to save metadata to PostgreSQL: {e}")
         logger.info("Continuing anyway...")
     
     # 9. Save processed data for future use

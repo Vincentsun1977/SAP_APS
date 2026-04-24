@@ -207,7 +207,7 @@ def main():
     model.save(model_path)
     
     # 8. Save metadata
-    logger.info("Step 8: Saving model metadata")
+    logger.info("Step 8: Saving model metadata to PostgreSQL")
     metadata = {
         "model_version": f"aps_optimized_v1.0_{timestamp}",
         "algorithm": "XGBoost (Recall Optimized)",
@@ -235,9 +235,9 @@ def main():
     
     try:
         db.save_model_metadata(metadata)
-        logger.info("✓ Metadata saved to Supabase")
+        logger.info("✓ Metadata saved to PostgreSQL")
     except Exception as e:
-        logger.warning(f"Failed to save metadata to Supabase: {e}")
+        logger.warning(f"Failed to save metadata to PostgreSQL: {e}")
         logger.info("Continuing anyway...")
     
     # 9. Save processed data

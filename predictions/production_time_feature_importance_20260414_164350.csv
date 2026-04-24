@@ -1,0 +1,16 @@
+feature,importance
+create_to_start_gap,0.15087904
+earliest_start_days,0.14792414
+total_production_time,0.12308869
+expected_planned_ratio,0.033528306
+qty_time_interaction,0.030749012
+planned_finish_quarter,0.028814835
+material_target_encoded,0.027920054
+mrp_controller_encoded,0.026062118
+material_line_avg_production_time_90d,0.02537154
+complexity_capacity_interaction,0.024174988
+material_order_count_30d,0.024058836
+line_avg_production_time_90d,0.021195259
+planned_finish_weekday,0.020754972
+workload_intensity,0.020591354
+planned_start_weekday,0.019873496

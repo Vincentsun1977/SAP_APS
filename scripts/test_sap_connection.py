@@ -160,6 +160,48 @@ def test_metadata(client: SAPODataClient):
         return False
 
 
+def test_fetch_caufv_data(client: SAPODataClient):
+    """测试获取 CAUFV 表数据"""
+    print("\n" + "=" * 70)
+    print("测试 6: 获取 CAUFV 表数据")
+    print("=" * 70)
+
+    try:
+        # 定义过滤条件
+        filter_conditions = (
+            "AUTYP eq '10' and "
+            "WERKS eq '1202' and "
+            "GSTRP ge datetime'2024-01-01T00:00:00' and "
+            "GSTRP le datetime'2025-12-31T23:59:59'"
+        )
+
+        # 定义需要的字段
+        select_fields = [
+            "AUFNR", "KDAUF", "KDPOS", "PLNBEZ", "GAMNG", "GSTRP", "GLTRP", "GSTRI", "GLTRI"
+        ]
+
+        # 获取数据
+        caufv_data = client.get_table_data(
+            table_name="CAUFV",
+            filters=filter_conditions,
+            select=select_fields
+        )
+
+        if caufv_data:
+            print(f"✅ 成功获取 {len(caufv_data)} 条数据")
+            print("\n示例数据:")
+            for row in caufv_data[:5]:  # 打印前 5 条数据
+                print(row)
+            return True
+        else:
+            print("⚠️  未获取到数据")
+            return False
+
+    except Exception as e:
+        print(f"❌ 获取 CAUFV 数据失败: {e}")
+        return False
+
+
 def main():
     """主测试流程"""
     parser = argparse.ArgumentParser(description='测试 SAP 连接和数据提取')
@@ -208,7 +250,8 @@ def main():
             ("获取订单", lambda: test_fetch_orders(client)),
             ("获取物料", lambda: test_fetch_materials(client)),
             ("数据转换", lambda: test_data_transformation(client)),
-            ("获取元数据", lambda: test_metadata(client))
+            ("获取元数据", lambda: test_metadata(client)),
+            ("获取 CAUFV 数据", lambda: test_fetch_caufv_data(client)),
         ]
         
         results = []

@@ -120,7 +120,7 @@
 
 ### 1. SAP 端需要提供的 OData 服务
 
-#### 服务 1: 生产订单历史数据 (Z_PROD_ORDER_HISTORY_SRV)
+#### 服务 1: 生产订单历史数据 (ABB/Test/ZTTPP_APS/ProductionOrder)
 
 **Entity Set**: `ProductionOrderSet`
 
@@ -154,7 +154,7 @@ $filter=ActualFinishDate ne null and
 
 **示例 URL**:
 ```
-https://sap-server:port/sap/opu/odata/sap/Z_PROD_ORDER_HISTORY_SRV/ProductionOrderSet?
+https://sap-server:port/sap/opu/odata/sap/ABB/Test/ZTTPP_APS/ProductionOrder/ProductionOrderSet?
   $filter=ActualFinishDate ne null and BasicStartDate ge datetime'2024-01-01T00:00:00'
   &$format=json
   &$top=1000
@@ -219,7 +219,7 @@ src/
 
 **请求**:
 ```http
-GET /sap/opu/odata/sap/Z_PROD_ORDER_HISTORY_SRV/ProductionOrderSet
+GET /sap/opu/odata/sap/ABB/Test/ZTTPP_APS/ProductionOrder/ProductionOrderSet
 Authorization: Basic <base64_credentials>
 Accept: application/json
 
@@ -438,7 +438,7 @@ define view Z_MATERIAL_MASTER
 #### 步骤 1.3: 激活 OData 服务
 
 在 SAP Gateway (SEGW) 中：
-1. 创建服务 `Z_PROD_ORDER_HISTORY_SRV`
+1. 创建服务 `ABB/Test/ZTTPP_APS/ProductionOrder`
 2. 注册服务到 `/IWFND/MAINT_SERVICE`
 3. 分配权限给技术用户
 
@@ -466,7 +466,7 @@ SAP_USERNAME=ML_USER
 SAP_PASSWORD=your_password
 
 # OData 服务路径
-SAP_ODATA_HISTORY=/sap/opu/odata/sap/Z_PROD_ORDER_HISTORY_SRV
+SAP_ODATA_HISTORY=/sap/opu/odata/sap/ABB/Test/ZTTPP_APS/ProductionOrder
 SAP_ODATA_MATERIAL=/sap/opu/odata/sap/Z_MATERIAL_MASTER_SRV
 SAP_ODATA_CAPACITY=/sap/opu/odata/sap/Z_LINE_CAPACITY_SRV
 
@@ -552,7 +552,7 @@ SAP 端需要为技术用户分配以下权限：
 |---------|------|----|----|
 | S_RFC | RFC_NAME | Z_PROD_* | 允许调用自定义 RFC |
 | S_TABU_DIS | DICBERCLS | &NC& | 允许读取表数据 |
-| S_SERVICE | SRV_NAME | Z_PROD_ORDER_HISTORY_SRV | OData 服务权限 |
+| S_SERVICE | SRV_NAME | ABB/Test/ZTTPP_APS/ProductionOrder | OData 服务权限 |
 
 ---
 

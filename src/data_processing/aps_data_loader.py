@@ -85,6 +85,7 @@ class APSDataLoader:
             'Basic start date': 'planned_start_date',
             'Basic finish date': 'planned_finish_date',
             'Actual finish date': 'actual_finish_date',
+            'Actual start time': 'actual_start_date',
             'Unit of measure (=GMEIN)': 'unit',
             'Created on': 'created_date',
             'Entered by': 'entered_by',
@@ -95,7 +96,7 @@ class APSDataLoader:
         df = df.rename(columns=column_mapping)
         
         # Convert date columns
-        date_cols = ['planned_start_date', 'planned_finish_date', 'actual_finish_date', 'created_date']
+        date_cols = ['planned_start_date', 'planned_finish_date', 'actual_finish_date', 'actual_start_date', 'created_date']
         for col in date_cols:
             if col in df.columns:
                 df[col] = pd.to_datetime(df[col], errors='coerce')
@@ -182,11 +183,27 @@ class APSDataLoader:
         capacity_df = self.capacity_df.copy()
         capacity_df.columns = capacity_df.columns.str.strip()
         
-        capacity_mapping = {
-            'Production Line': 'production_line',
-            'Capacity': 'line_capacity'
+        # Support both old format (single 'Capacity') and new per-weekday format
+        day_cols_map = {
+            'Capacity Mo': 'cap_mo',
+            'Capacity Tu': 'cap_tu',
+            'Capacity We': 'cap_we',
+            'Capacity Th': 'cap_th',
+            'Capacity Fr': 'cap_fr',
         }
-        capacity_df = capacity_df.rename(columns=capacity_mapping)
+        has_daily = all(c in capacity_df.columns for c in day_cols_map)
+        
+        rename_map = {'Production Line': 'production_line'}
+        if has_daily:
+            rename_map.update(day_cols_map)
+            capacity_df = capacity_df.rename(columns=rename_map)
+            day_renamed = list(day_cols_map.values())
+            # Average Mon-Fri capacity as line_capacity (backward compatible)
+            capacity_df['line_capacity'] = capacity_df[day_renamed].mean(axis=1)
+            logger.info(f"  Per-weekday capacity format detected (Mon-Fri)")
+        else:
+            rename_map['Capacity'] = 'line_capacity'
+            capacity_df = capacity_df.rename(columns=rename_map)
         
         # Merge on production line
         merged = merged_df.merge(
@@ -222,7 +239,10 @@ class APSDataLoader:
         # Step 4: Merge with capacity
         merged = self.merge_with_capacity(merged)
         
-        # Step 5: Create additional features
+        # Step 5: Merge with shortage data (if available)
+        merged = self.merge_with_shortage(merged)
+        
+        # Step 6: Create additional features
         merged = self._create_basic_features(merged)
         
         logger.info("=" * 60)
@@ -230,6 +250,131 @@ class APSDataLoader:
         logger.info(f"✓ Training samples: {merged['is_delayed'].notna().sum()}")
         logger.info(f"✓ Delay rate: {merged['is_delayed'].mean():.2%}")
         logger.info("=" * 60)
+        
+        return merged
+    
+    def merge_with_shortage(self, merged_df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Merge with component shortage data (if Shortage.csv exists)
+        
+        Shortage.csv only needs to contain components WITH shortages (Shortage Qty > 0).
+        Orders not in the file are assumed to have no shortage.
+        
+        Aggregates to production order level:
+        - has_shortage: whether order has any component shortage (0/1)
+        - shortage_component_count: number of components with shortage
+        - total_shortage_qty: total shortage quantity across all components
+        - max_shortage_qty: single largest component shortage quantity
+        - max_shortage_pct: worst component shortage percentage (shortage/required)
+        
+        Args:
+            merged_df: DataFrame already merged with FG and capacity
+            
+        Returns:
+            DataFrame with shortage features (or unchanged if no shortage data)
+        """
+        shortage_path = self.data_dir / "Shortage.csv"
+        
+        if not shortage_path.exists():
+            logger.info("⚠ Shortage.csv not found - shortage features will be filled with defaults")
+            merged_df['has_shortage'] = 0
+            merged_df['shortage_component_count'] = 0
+            merged_df['total_shortage_qty'] = 0.0
+            merged_df['max_shortage_qty'] = 0.0
+            merged_df['max_shortage_pct'] = 0.0
+            return merged_df
+        
+        logger.info("Merging with shortage data...")
+        
+        shortage_df = pd.read_csv(shortage_path, encoding='utf-8', low_memory=False)
+        logger.info(f"✓ Loaded Shortage.csv: {len(shortage_df)} rows")
+        
+        # Standardize column names (support both SAP export format and template format)
+        shortage_col_mapping = {
+            # SAP export format
+            'Order': 'production_number',
+            'Material': 'component_material',
+            'Description': 'component_description',
+            'Reqmnt qty': 'required_qty',
+            'Available qty': 'available_qty',
+            'Shortage qty': 'shortage_qty',
+            'ReqmtsDate': 'requirement_date',
+            # Template format (fallback)
+            'Component Material': 'component_material',
+            'Component Description': 'component_description',
+            'Required Qty': 'required_qty',
+            'Available Qty': 'available_qty',
+            'Shortage Qty': 'shortage_qty',
+            'Requirement Date': 'requirement_date',
+        }
+        shortage_df = shortage_df.rename(columns={
+            k: v for k, v in shortage_col_mapping.items() if k in shortage_df.columns
+        })
+        
+        # Ensure numeric types
+        shortage_df['required_qty'] = pd.to_numeric(shortage_df['required_qty'], errors='coerce').fillna(0)
+        shortage_df['shortage_qty'] = pd.to_numeric(shortage_df['shortage_qty'], errors='coerce').fillna(0)
+        shortage_df['production_number'] = pd.to_numeric(shortage_df['production_number'], errors='coerce')
+        
+        # SAP convention: shortage qty can be NEGATIVE or POSITIVE depending on export
+        # Convert to positive absolute shortage quantity
+        shortage_df['shortage_qty'] = shortage_df['shortage_qty'].abs()
+        
+        # Aggregate TOTAL components per order (before filtering shortage only)
+        order_total = shortage_df.groupby('production_number').agg(
+            total_component_count=('component_material', 'nunique'),
+            total_required_qty=('required_qty', 'sum'),
+        ).reset_index()
+        logger.info(f"  Total orders in shortage file: {len(order_total)}")
+        logger.info(f"  Total component rows: {len(shortage_df)}")
+        
+        # Filter to rows that actually have shortage (qty > 0)
+        shortage_only = shortage_df[shortage_df['shortage_qty'] > 0].copy()
+        logger.info(f"  Effective shortage records: {len(shortage_only)}")
+        logger.info(f"  Orders with at least 1 shortage: {shortage_only['production_number'].nunique()}")
+        
+        # Component-level shortage percentage
+        shortage_only['shortage_pct'] = shortage_only['shortage_qty'] / (shortage_only['required_qty'] + 1e-6)
+        
+        # Aggregate shortage info per order
+        order_shortage = shortage_only.groupby('production_number').agg(
+            shortage_component_count=('component_material', 'count'),
+            total_shortage_qty=('shortage_qty', 'sum'),
+            max_shortage_qty=('shortage_qty', 'max'),
+            max_shortage_pct=('shortage_pct', 'max'),
+        ).reset_index()
+        
+        # Merge total components with shortage aggregates
+        order_shortage = order_total.merge(order_shortage, on='production_number', how='left')
+        order_shortage['shortage_component_count'] = order_shortage['shortage_component_count'].fillna(0)
+        order_shortage['total_shortage_qty'] = order_shortage['total_shortage_qty'].fillna(0)
+        order_shortage['max_shortage_qty'] = order_shortage['max_shortage_qty'].fillna(0)
+        order_shortage['max_shortage_pct'] = order_shortage['max_shortage_pct'].fillna(0)
+        
+        # Ratio features: how severe is the shortage relative to total components
+        order_shortage['shortage_component_ratio'] = (
+            order_shortage['shortage_component_count'] / (order_shortage['total_component_count'] + 1e-6)
+        )
+        order_shortage['shortage_qty_ratio'] = (
+            order_shortage['total_shortage_qty'] / (order_shortage['total_required_qty'] + 1e-6)
+        )
+        order_shortage['has_shortage'] = (order_shortage['shortage_component_count'] > 0).astype(int)
+        
+        # Drop intermediate columns before merge
+        order_shortage = order_shortage.drop(columns=['total_component_count', 'total_required_qty'])
+        
+        # Merge with main dataset
+        merged = merged_df.merge(order_shortage, on='production_number', how='left')
+        
+        # Fill orders without shortage data (no shortage)
+        shortage_cols = ['has_shortage', 'shortage_component_count',
+                        'total_shortage_qty', 'max_shortage_qty', 'max_shortage_pct',
+                        'shortage_component_ratio', 'shortage_qty_ratio']
+        for col in shortage_cols:
+            merged[col] = merged[col].fillna(0)
+        
+        matched = merged['has_shortage'].sum()
+        logger.info(f"Orders with shortage: {int(matched)}/{len(merged)}")
         
         return merged
     

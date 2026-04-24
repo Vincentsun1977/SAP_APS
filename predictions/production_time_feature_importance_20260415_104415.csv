@@ -1,0 +1,16 @@
+feature,importance
+earliest_start_days,0.20183015
+total_production_time,0.1698667
+create_to_start_gap,0.10298214
+shortage_qty_ratio,0.052745562
+expected_production_days,0.028149689
+shortage_component_count,0.023037087
+total_shortage_qty,0.021395015
+planned_finish_weekday,0.019721424
+qty_time_interaction,0.019712605
+complexity_capacity_interaction,0.017679006
+qty_per_planned_day,0.016037686
+material_order_count_30d,0.015461397
+planned_start_weekday,0.0147449905
+planned_finish_quarter,0.014379242
+planned_start_month,0.013687917

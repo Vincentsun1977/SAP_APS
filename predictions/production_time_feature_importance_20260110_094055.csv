@@ -1,0 +1,16 @@
+feature,importance
+actual_duration_days,0.24831736
+delay_days,0.22488357
+is_delayed,0.07110096
+planned_production_days,0.06272512
+planned_start_is_month_start,0.061397184
+total_production_time,0.04919781
+planned_start_quarter,0.0294089
+planned_start_weekday,0.028068503
+planned_start_is_weekend,0.025335472
+planned_duration_days,0.024551285
+planned_start_month,0.021802774
+planned_start_year,0.0173116
+planned_finish_month,0.016356984
+material_line_avg_production_time_90d,0.011758776
+planned_finish_weekday,0.010938458

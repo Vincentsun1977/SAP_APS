@@ -1,0 +1,16 @@
+feature,importance
+constraint_factor,0.08161768
+material_target_encoded,0.07412783
+create_to_start_gap,0.06274805
+planned_prod_ratio,0.035623044
+planned_finish_weekday,0.029694926
+planned_start_weekday,0.02616399
+concurrent_orders_on_start,0.024429608
+total_production_time,0.022960126
+shortage_component_count,0.022715177
+expected_planned_ratio,0.02240005
+planned_production_days,0.022271976
+total_capacity_available,0.021384014
+material_avg_production_time_90d,0.021028185
+material_line_avg_production_time_90d,0.018681973
+planned_duration_days,0.01848285

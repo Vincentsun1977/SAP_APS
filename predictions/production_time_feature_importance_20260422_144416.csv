@@ -1,0 +1,16 @@
+feature,importance
+constraint_factor,0.07865681
+material_target_encoded,0.07223907
+create_to_start_gap,0.047849994
+planned_prod_ratio,0.03577025
+concurrent_orders_on_start,0.025719564
+mrp_controller_encoded,0.025220139
+material_avg_production_time_90d,0.022725213
+planned_start_day_capacity,0.02072032
+material_line_avg_production_time_90d,0.020715162
+total_production_time,0.020659456
+total_capacity_available,0.020176766
+expected_planned_ratio,0.019829655
+forward_7d_line_orders,0.019801766
+production_line_freq,0.019577011
+qty_ratio_to_material_avg,0.019205099

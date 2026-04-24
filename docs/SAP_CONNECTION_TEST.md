@@ -25,7 +25,7 @@ SAP_PROTOCOL=https
 SAP_CLIENT=230
 SAP_USERNAME=CNZHZHA62
 SAP_PASSWORD=aBBaBB@DDD000666aBBaBB@DDD000666
-SAP_ODATA_SERVICE=/sap/opu/odata/sap/Z_PROD_ORDER_HISTORY_SRV
+SAP_ODATA_SERVICE=/sap/opu/odata/sap/ABB/Test/ZTTPP_APS/ProductionOrder
 ```
 
 ⚠️ **注意**: `SAP_ODATA_SERVICE` 路径需要 SAP 团队提供实际值
@@ -66,11 +66,11 @@ python scripts/simple_sap_test.py
 ✓ SAP 主机: cn-s-sapd061.cn.abb.com:44300
 ✓ 客户端: 230
 ✓ 用户: CNZHZHA62
-✓ 服务路径: /sap/opu/odata/sap/Z_PROD_ORDER_HISTORY_SRV
+✓ 服务路径: /sap/opu/odata/sap/ABB/Test/ZTTPP_APS/ProductionOrder
 
 步骤 2: 构建请求
 --------------------------------------------------------------------------------
-✓ 请求 URL: https://cn-s-sapd061.cn.abb.com:44300/sap/opu/odata/sap/Z_PROD_ORDER_HISTORY_SRV/ProductionOrderSet
+✓ 请求 URL: https://cn-s-sapd061.cn.abb.com:44300/sap/opu/odata/sap/ABB/Test/ZTTPP_APS/ProductionOrder/ProductionOrderSet
 ✓ 查询参数: top=10, filter=ActualFinishDate ne null
 
 步骤 3: 发送请求到 SAP
@@ -161,7 +161,7 @@ nano .env
 SAP_HOST=your-sap-server.com
 SAP_USERNAME=your_username
 SAP_PASSWORD=your_password
-SAP_ODATA_SERVICE=/sap/opu/odata/sap/Z_PROD_ORDER_HISTORY_SRV
+SAP_ODATA_SERVICE=/sap/opu/odata/sap/ABB/Test/ZTTPP_APS/ProductionOrder
 ```
 
 ---
@@ -186,7 +186,7 @@ SAP_ODATA_SERVICE=/sap/opu/odata/sap/Z_PROD_ORDER_HISTORY_SRV
 ```
 ❌ 服务不存在 (404)
    请确认 OData 服务已发布
-   可以在浏览器访问: https://sap-server/sap/opu/odata/sap/Z_PROD_ORDER_HISTORY_SRV/$metadata
+   可以在浏览器访问: https://sap-server/sap/opu/odata/sap/ABB/Test/ZTTPP_APS/ProductionOrder/$metadata
 ```
 
 **解决**:

@@ -98,18 +98,23 @@ def main():
     model_path = f"models/xgb_model_{timestamp}.json"
     model.save(model_path)
     
-    # 8. Save metadata to Supabase
-    logger.info("Step 8: Saving model metadata")
+    # 8. Save metadata to PostgreSQL
+    logger.info("Step 8: Saving model metadata to PostgreSQL")
     metadata = {
         "model_version": f"v1.0_{timestamp}",
         "algorithm": "XGBoost",
         "training_date": datetime.now().isoformat(),
         "train_samples": int(len(X_train)),
+        "val_samples": int(len(X_val)),
+        "total_samples": int(len(df_train)),
+        "num_features": len(feature_cols),
         "test_accuracy": metrics["accuracy"],
         "precision_score": metrics["precision"],
         "recall_score": metrics["recall"],
         "f1_score": metrics["f1_score"],
-        "feature_importance": importance,
+        "roc_auc": metrics.get("roc_auc"),
+        "delay_rate": float(y.mean()) if len(y) else None,
+        "feature_importance": {k: float(v) for k, v in importance.items()},
         "hyperparameters": model.params,
         "model_path": model_path,
         "is_active": True  # Mark as active model
@@ -117,9 +122,9 @@ def main():
     
     try:
         db.save_model_metadata(metadata)
-        logger.info("Metadata saved to Supabase")
+        logger.info("Metadata saved to PostgreSQL")
     except Exception as e:
-        logger.warning(f"Failed to save metadata to Supabase: {e}")
+        logger.warning(f"Failed to save metadata to PostgreSQL: {e}")
     
     logger.info("\\n" + "="*60)
     logger.info("✅ Training complete!")

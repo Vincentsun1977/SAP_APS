@@ -1,0 +1,16 @@
+feature,importance
+material_target_encoded,0.12589847
+create_to_start_gap,0.07106196
+complexity_capacity_interaction,0.06000513
+constraint_factor,0.03644975
+log_order_quantity,0.03188394
+planned_prod_ratio,0.030746875
+planned_start_weekday,0.024213307
+concurrent_orders_on_start,0.020923043
+planned_start_is_weekend,0.019371198
+total_capacity_available,0.018883029
+production_line_freq,0.016654113
+expected_production_days,0.016481228
+forward_7d_line_orders,0.016306069
+qty_share_of_day,0.016185574
+max_shortage_qty,0.015498136

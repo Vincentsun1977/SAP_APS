@@ -22,7 +22,7 @@ sap:
   
   # OData 服务路径
   services:
-    production_orders: "/sap/opu/odata/sap/Z_PROD_ORDER_HISTORY_SRV"
+    production_orders: "/sap/opu/odata/sap/ZTTPP_APS/ProductionOrder"
     material_master: "/sap/opu/odata/sap/Z_MATERIAL_MASTER_SRV"
     line_capacity: "/sap/opu/odata/sap/Z_LINE_CAPACITY_SRV"
   
@@ -79,6 +79,28 @@ sync:
       - "no_null_in_required_fields"
       - "valid_date_format"
       - "positive_quantities"
+
+# ==============================
+# OpenSQL API 配置（新增）
+# ==============================
+opensql:
+  # API 端点
+  endpoint: "https://test.nas-saperp.abb.com/abb/ybc_query_mind//SAPQueryMind"
+  sap_client: "800"
+
+  # 认证：直接使用已编码的 Base64 令牌（推荐使用环境变量）
+  auth:
+    type: "basic_token"
+    token: "${SAP_OPENSQL_TOKEN}"
+
+  # 请求配置
+  request:
+    timeout: 120      # 秒（Shortage 数据量大，适当加长）
+    max_retries: 3
+    retry_delay: 5    # 秒
+
+  # 默认工厂
+  plant: "1202"
 
 # 日志配置
 logging:

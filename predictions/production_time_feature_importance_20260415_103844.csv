@@ -1,0 +1,16 @@
+feature,importance
+total_production_time,0.068850055
+shortage_qty_ratio,0.05232839
+shortage_component_count,0.05055476
+shortage_component_ratio,0.049497493
+qty_time_interaction,0.043604374
+material_complexity,0.03868919
+shortage_qty_interaction,0.036494132
+total_shortage_qty,0.035944425
+expected_production_days,0.035127297
+material_target_encoded,0.03448982
+material_line_avg_production_time_90d,0.032557465
+create_to_start_gap,0.032158095
+material_order_count_30d,0.026476065
+planned_start_month,0.025999377
+planned_start_day_of_month,0.024225004

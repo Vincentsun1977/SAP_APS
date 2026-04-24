@@ -7,6 +7,7 @@ import os
 import sys
 from pathlib import Path
 from datetime import datetime
+from urllib import response
 import requests
 import base64
 import json
@@ -20,11 +21,15 @@ load_dotenv()
 OUTPUT_DIR = Path("data/sap_test")
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
+# 服务路径
+SERVICE_PATH = '/sap/opu/odata/sap/ABB/Test/ZTTPP_APS/ProductionOrder'
+
 
 def test_sap_connection():
     """测试 SAP 连接并保存数据"""
     
     print("=" * 80)
+
     print("🧪 SAP 连通性测试")
     print("=" * 80)
     
@@ -38,7 +43,8 @@ def test_sap_connection():
     sap_client = os.getenv('SAP_CLIENT', '100')
     sap_username = os.getenv('SAP_USERNAME')
     sap_password = os.getenv('SAP_PASSWORD')
-    sap_service = os.getenv('SAP_ODATA_SERVICE', '/sap/opu/odata/sap/Z_PROD_ORDER_HISTORY_SRV')
+    sap_service = os.getenv('SAP_ODATA_SERVICE', '/sap/opu/odata/sap/ABB/Test/ZTTPP_APS/ProductionOrder')
+    sap_verify_ssl = os.getenv('SAP_VERIFY_SSL', 'false').lower() == 'true'
     
     # 验证配置
     if not all([sap_host, sap_username, sap_password]):
@@ -54,6 +60,7 @@ def test_sap_connection():
     print(f"✓ 客户端: {sap_client}")
     print(f"✓ 用户: {sap_username}")
     print(f"✓ 服务路径: {sap_service}")
+    print(f"✓ SSL 验证: {'启用' if sap_verify_ssl else '禁用（仅测试）'}")
     
     # 2. 构建请求
     print("\n步骤 2: 构建请求")
@@ -73,16 +80,19 @@ def test_sap_connection():
         'sap-client': sap_client
     }
     
-    # 查询参数（只获取前 10 条测试）
-    params = {
+    # 将查询参数直接传递到 headers 中
+    headers.update({
         '$format': 'json',
         '$top': '10',
         '$filter': 'ActualFinishDate ne null',
         '$orderby': 'BasicStartDate desc'
-    }
-    
+    })
+
+    # 移除 params，确保只通过 headers 传递
+    params = None
+
     print(f"✓ 请求 URL: {entity_url}")
-    print(f"✓ 查询参数: top=10, filter=ActualFinishDate ne null")
+    print(f"✓ 查询参数（通过 headers 传递）: {json.dumps(headers, indent=2)}")
     
     # 3. 发送请求
     print("\n步骤 3: 发送请求到 SAP")
@@ -96,8 +106,13 @@ def test_sap_connection():
             headers=headers,
             params=params,
             timeout=30,
-            verify=True  # 生产环境建议设为 True
+            verify=sap_verify_ssl  # 从配置读取，测试环境可设为 False
         )
+        
+        # 禁用 SSL 警告（仅在 verify=False 时）
+        if not sap_verify_ssl:
+            import urllib3
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         
         print(f"✓ HTTP 状态码: {response.status_code}")
         
@@ -185,6 +200,17 @@ def test_sap_connection():
             if len(value_str) > 50:
                 value_str = value_str[:50] + "..."
             print(f"  {key:<25}: {value_str}")
+    
+    # 修正日期字段为日期型，不包含时间
+    for order in orders:
+        if 'GSTRP' in order:
+            order['GSTRP'] = order['GSTRP'].split('T')[0]
+        if 'GLTRP' in order:
+            order['GLTRP'] = order['GLTRP'].split('T')[0]
+        if 'GSTRI' in order:
+            order['GSTRI'] = order['GSTRI'].split('T')[0]
+        if 'GLTRI' in order:
+            order['GLTRI'] = order['GLTRI'].split('T')[0]
     
     # 6. 转换并保存数据
     print("\n步骤 6: 转换并保存数据")
@@ -276,6 +302,85 @@ def test_sap_connection():
     return True
 
 
+def fetch_caufv_data():
+    """获取 CAUFV 表数据"""
+    print("\n" + "=" * 80)
+    print("🧪 测试获取 CAUFV 表数据")
+    print("=" * 80)
+
+    # 1. 构建请求
+    sap_host = os.getenv('SAP_HOST')
+    sap_port = os.getenv('SAP_PORT', '443')
+    sap_protocol = os.getenv('SAP_PROTOCOL', 'https')
+    sap_client = os.getenv('SAP_CLIENT', '100')
+    sap_username = os.getenv('SAP_USERNAME')
+    sap_password = os.getenv('SAP_PASSWORD')
+    sap_verify_ssl = os.getenv('SAP_VERIFY_SSL', 'false').lower() == 'true'
+
+    base_url = f"{sap_protocol}://{sap_host}:{sap_port}"
+    service_url = base_url + '/ABB/Test/ZTTPP_APS/ProductionOrder'
+    entity_url = service_url
+
+    credentials = f"{sap_username}:{sap_password}"
+    encoded_credentials = base64.b64encode(credentials.encode()).decode()
+
+    headers = {
+        'Authorization': f'Basic {encoded_credentials}',
+        'Accept': 'application/json',
+        'sap-client': sap_client
+    }
+
+    params = {
+        '$format': 'json',
+        '$filter': (
+            "AUTYP eq '10' and "
+            "WERKS eq '1202' and "
+            "GSTRP ge '20240101' and "
+            "GSTRP le '20251231'"
+        ),
+        '$select': 'AUFNR,KDAUF,KDPOS,PLNBEZ,GAMNG,GSTRP,GLTRP,GSTRI,GLTRI'
+    }
+
+    # 将查询参数添加到 headers 中
+    for key, value in params.items():
+        headers[key] = value
+
+    # 清空 params 以避免重复传递
+    params = {}
+
+    # 添加查询表参数到 headers
+    headers['Query-Table'] = 'CAUFV'
+
+    try:
+        print(f"✓ 请求 URL: {entity_url}")
+        response = requests.get(
+            entity_url,
+            headers=headers,
+            params=params,
+            timeout=30,
+            verify=sap_verify_ssl
+        )
+
+        if response.status_code != 200:
+            print(f"❌ 请求失败: HTTP {response.status_code}")
+            print(f"   响应内容: {response.text[:200]}")
+            return False
+        data = response.json()
+        if 'd' in data and 'results' in data['d']:
+            results = data['d']['results']
+            print(f"✓ 成功获取 {len(results)} 条数据")
+            for row in results[:5]:
+                print(row)
+            return True
+        else:
+            print("⚠️  响应格式异常")
+            return False
+
+    except Exception as e:
+        print(f"❌ 获取数据失败: {e}")
+        return False
+
+
 def main():
     """主函数"""
     print("\n🚀 开始 SAP 连通性测试...\n")
@@ -298,6 +403,7 @@ def main():
     # 运行测试
     try:
         success = test_sap_connection()
+        success = fetch_caufv_data()
         return 0 if success else 1
     
     except KeyboardInterrupt:

@@ -1,0 +1,16 @@
+feature,importance
+total_production_time,0.16387522
+create_to_start_gap,0.13196136
+material_complexity,0.07426366
+shortage_qty_ratio,0.057592127
+expected_planned_ratio,0.031010272
+mrp_controller_encoded,0.029517215
+shortage_component_count,0.02944941
+earliest_start_days,0.029342711
+total_shortage_qty,0.026385874
+expected_production_days,0.020681312
+shortage_qty_interaction,0.02037989
+planned_finish_weekday,0.020045687
+material_line_avg_production_time_90d,0.020037895
+qty_time_interaction,0.019964142
+shortage_component_ratio,0.019636082

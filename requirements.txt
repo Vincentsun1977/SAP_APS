@@ -15,8 +15,8 @@ matplotlib==3.8.2
 loguru==0.7.2
 APScheduler==3.10.4
 optuna==3.5.0
-sqlalchemy==2.0.25
-psycopg2-binary==2.9.9
+sqlalchemy>=2.0.36
+psycopg2-binary==2.9.11
 jupyter==1.0.0
 ipykernel==6.28.0
 python-multipart==0.0.6

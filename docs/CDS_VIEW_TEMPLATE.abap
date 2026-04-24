@@ -182,6 +182,6 @@ where
 *    - 包含权限: S_SERVICE, S_RFC, S_TABU_DIS
 *
 * 4. 测试 URL:
-*    https://sap-server/sap/opu/odata/sap/Z_PROD_ORDER_HISTORY_SRV/$metadata
+*    https://sap-server/sap/opu/odata/sap/ABB/Test/ZTTPP_APS/ProductionOrder/$metadata
 *
 *&---------------------------------------------------------------------*

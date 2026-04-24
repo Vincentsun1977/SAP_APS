@@ -1,0 +1,5 @@
+material,predicted_tpt,order_count,tpt_std,tpt_min,tpt_max,material_description,production_line
+CDX6071206R2501,4.5,1,0.0,4.5,4.5,Vmax/L 12.06.25 C,3_12KV
+CDX6082425R2502,5.63,1,0.0,5.63,5.63,VD4/P 24.25.25 P275,2_12KV
+CDX6131206R2521,4.32,3,0.0,4.32,4.32,VD4/P 12.06.25 P150 PT (IEC) D=35,1_12KV
+CDX6301206R2501,5.1,1,0.0,5.1,5.1,VD4/P 12.06.25 P135,1_12KV

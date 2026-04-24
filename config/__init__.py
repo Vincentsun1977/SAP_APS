@@ -3,15 +3,18 @@ Configuration management for SAP Production Predictor
 """
 from pydantic_settings import BaseSettings
 from functools import lru_cache
+from typing import Optional
 
 
 class Settings(BaseSettings):
     """Application settings from environment variables"""
     
-    # Supabase
-    supabase_url: str
-    supabase_key: str
-    supabase_service_key: str
+    model_config = {"protected_namespaces": (), "extra": "ignore"}
+    
+    # Supabase (optional legacy support)
+    supabase_url: Optional[str] = None
+    supabase_key: Optional[str] = None
+    supabase_service_key: Optional[str] = None
     
     # Project
     project_name: str = "SAP Production Predictor"
@@ -33,10 +36,20 @@ class Settings(BaseSettings):
     # Database
     db_pool_size: int = 10
     db_max_overflow: int = 20
+    postgres_host: str = "localhost"
+    postgres_port: int = 5432
+    postgres_db: str = "APSDB"
+    postgres_user: str = "CNHUSUN"
+    postgres_password: str = "lemon1977"
+    postgres_schema: str = "public"
+    postgres_ssl_mode: str = "disable"  # disable / require / verify-ca / verify-full
     
-    class Config:
-        env_file = ".env"
-        case_sensitive = False
+    model_config = {
+        "env_file": ".env",
+        "case_sensitive": False,
+        "protected_namespaces": (),
+        "extra": "ignore"
+    }
 
 
 @lru_cache()

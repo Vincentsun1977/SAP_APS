@@ -52,7 +52,7 @@ nano config/sap_config_prod.yaml
 ```yaml
 sap:
   services:
-    production_orders: "/sap/opu/odata/sap/Z_PROD_ORDER_HISTORY_SRV"
+    production_orders: "/sap/opu/odata/sap/ABB/Test/ZTTPP_APS/ProductionOrder"
     material_master: "/sap/opu/odata/sap/Z_MATERIAL_MASTER_SRV"
     line_capacity: "/sap/opu/odata/sap/Z_LINE_CAPACITY_SRV"
 ```
@@ -132,7 +132,7 @@ python scripts/test_sap_connection.py --config config/sap_config_prod.yaml
 **解决方案**:
 - 联系 SAP 团队确认服务是否已发布
 - 检查服务路径是否正确
-- 在浏览器访问 `https://sap-server/sap/opu/odata/sap/Z_PROD_ORDER_HISTORY_SRV/$metadata`
+- 在浏览器访问 `https://sap-server/sap/opu/odata/sap/ABB/Test/ZTTPP_APS/ProductionOrder/$metadata`
 
 ---
 
