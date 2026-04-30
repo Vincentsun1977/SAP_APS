@@ -12,6 +12,9 @@ import os
 import numpy as np
 from pathlib import Path as _Path
 
+# 预测文件目录（真实目录）
+_PRED_DIR = _Path(__file__).parent.parent / "predictions"
+
 sys.path.append('.')
 
 # 加载 .env 文件中的环境变量
@@ -49,7 +52,7 @@ def main():
 
     page = st.sidebar.radio(
         "导航菜单",
-        ["📥 数据管理", "🤖 模型训练与测试", "🔮 TPT预测"],
+        ["📥 数据管理", "🤖 模型训练与测试", "🔮 TPT预测", "📁 预测结果"],
         label_visibility="collapsed",
     )
 
@@ -59,6 +62,8 @@ def main():
         show_model_training()
     elif page == "🔮 TPT预测":
         show_tpt_prediction()
+    elif page == "📁 预测结果":
+        show_predictions()
 
 
 # ======================================================================
@@ -2183,6 +2188,240 @@ def _display_test_results(y_actual, y_pred, meta_test, meta_cols,
             use_container_width=True, height=400,
         )
 
+
+# ======================================================================
+# 工具函数: 向 Streamlit 的 Tornado 服务注入 /predictions/ 路由
+# ======================================================================
+
+@st.cache_resource(show_spinner=False)
+def _mount_predictions_route() -> bool:
+    """在 Streamlit 内置 Tornado 服务器上挂载 /predictions/ 静态文件路由。
+    通过 gc 找到进程内唯一的 tornado.web.Application 实例，然后调用
+    add_handlers() 在 catch-all (.*)  路由之前插入 /predictions/ 规则。
+    """
+    import gc
+    import tornado.web
+    import tornado.httpserver
+    try:
+        # 方式 1: 通过 HTTPServer 找 Application
+        app = None
+        for obj in gc.get_objects():
+            if isinstance(obj, tornado.httpserver.HTTPServer):
+                cb = getattr(obj, "request_callback", None)
+                if isinstance(cb, tornado.web.Application):
+                    app = cb
+                    break
+        # 方式 2: 直接找 Application（备用）
+        if app is None:
+            for obj in gc.get_objects():
+                if type(obj) is tornado.web.Application:
+                    app = obj
+                    break
+        if app is None:
+            return False
+        pred_path = str(_PRED_DIR.resolve())
+
+        # 自定义目录浏览 handler
+        class _PredictionsIndexHandler(tornado.web.RequestHandler):
+            @staticmethod
+            def _list_files():
+                import os
+                files = []
+                for name in os.listdir(pred_path):
+                    p = os.path.join(pred_path, name)
+                    if os.path.isfile(p):
+                        stat = os.stat(p)
+                        files.append({
+                            "name": name,
+                            "size": stat.st_size,
+                            "mtime": stat.st_mtime,
+                        })
+                files.sort(key=lambda x: -x["mtime"])
+                return files
+
+            def _write_html(self):
+                import html
+                from datetime import datetime
+
+                files = self._list_files()
+                self.set_header("Content-Type", "text/html; charset=utf-8")
+                self.write("<html><head><title>predictions/ 文件列表</title></head><body>")
+                self.write("<h2>predictions/ 文件列表</h2><ul>")
+                for f in files:
+                    url = "/predictions/" + html.escape(f["name"])
+                    self.write(
+                        f"<li><a href='{url}'>{html.escape(f['name'])}</a> "
+                        f"({f['size']/1024:.1f} KB, "
+                        f"{datetime.fromtimestamp(f['mtime']).strftime('%Y-%m-%d %H:%M:%S')})</li>"
+                    )
+                self.write("</ul></body></html>")
+
+            def _write_json(self):
+                from datetime import datetime
+
+                files = self._list_files()
+                payload = {
+                    "path": "/predictions/",
+                    "count": len(files),
+                    "files": [
+                        {
+                            "name": f["name"],
+                            "size": f["size"],
+                            "size_kb": round(f["size"] / 1024, 1),
+                            "mtime": f["mtime"],
+                            "modified_at": datetime.fromtimestamp(f["mtime"]).strftime("%Y-%m-%d %H:%M:%S"),
+                            "url": f"/predictions/{f['name']}",
+                        }
+                        for f in files
+                    ],
+                }
+                self.set_header("Content-Type", "application/json; charset=utf-8")
+                self.write(payload)
+
+            def get(self, index_type=None):
+                if index_type == "json":
+                    self._write_json()
+                    return
+                self._write_html()
+
+        # 支持 ?Content-Type=JSON 参数，将 CSV 文件转为 JSON 返回
+        class _PredictionsFileHandler(tornado.web.StaticFileHandler):
+            async def get(self, path, include_body=True):
+                if self.get_argument("Content-Type", None) == "JSON":
+                    import os, csv, json
+                    file_path = os.path.join(pred_path, path)
+                    if not os.path.isfile(file_path):
+                        raise tornado.web.HTTPError(404, "File not found")
+                    suffix = os.path.splitext(path)[1].lower()
+                    if suffix == ".csv":
+                        with open(file_path, "r", encoding="utf-8-sig") as f:
+                            rows = list(csv.DictReader(f))
+                        # StaticFileHandler.finish() 需要 absolute_path 来计算 ETag
+                        self.absolute_path = file_path
+                        self.set_header("Content-Type", "application/json; charset=utf-8")
+                        self.finish(json.dumps(
+                            {"filename": path, "count": len(rows), "data": rows},
+                            ensure_ascii=False,
+                        ))
+                    else:
+                        raise tornado.web.HTTPError(400, "JSON conversion only supported for CSV files")
+                    return
+                await super().get(path, include_body)
+
+        app.add_handlers(r".*", [
+            (r"/predictions/index\.(json|html)", _PredictionsIndexHandler),
+            (r"/predictions/?", _PredictionsIndexHandler),
+            (r"/predictions/(.*)", _PredictionsFileHandler, {"path": pred_path}),
+        ])
+        return True
+    except Exception:
+        return False
+
+
+# ======================================================================
+# 页面 4: 预测结果浏览
+# ======================================================================
+
+def show_predictions():
+    """浏览并预览 predictions/ 目录中的所有预测结果文件"""
+    st.header("📁 预测结果")
+    st.markdown("浏览 `predictions/` 目录中保存的所有预测输出文件，支持预览内容及下载。")
+    st.markdown("---")
+
+    pred_dir = _PRED_DIR
+    if not pred_dir.exists():
+        st.warning("`predictions/` 目录不存在。")
+        return
+
+    all_files = sorted(pred_dir.iterdir(), key=lambda p: p.stat().st_mtime, reverse=True)
+    csv_files = [f for f in all_files if f.suffix.lower() == ".csv"]
+    json_files = [f for f in all_files if f.suffix.lower() == ".json"]
+    other_files = [f for f in all_files if f.suffix.lower() not in (".csv", ".json")]
+
+    # ---- 汇总指标 ----
+    col1, col2, col3 = st.columns(3)
+    col1.metric("CSV 文件数", len(csv_files))
+    col2.metric("JSON 文件数", len(json_files))
+    col3.metric("其他文件数", len(other_files))
+
+    st.markdown("---")
+
+    # ---- 文件选择 ----
+    file_options = [f.name for f in all_files]
+    if not file_options:
+        st.info("predictions/ 目录为空。")
+        return
+
+    selected_name = st.selectbox(
+        "选择文件预览",
+        file_options,
+        help="文件按修改时间倒序排列",
+    )
+    selected_path = pred_dir / selected_name
+
+    # ---- 文件元信息 ----
+    stat = selected_path.stat()
+    info_col1, info_col2 = st.columns(2)
+    info_col1.caption(f"大小: {stat.st_size / 1024:.1f} KB")
+    info_col2.caption(f"修改时间: {datetime.fromtimestamp(stat.st_mtime).strftime('%Y-%m-%d %H:%M:%S')}")
+
+    # ---- 预览内容 ----
+    suffix = selected_path.suffix.lower()
+    try:
+        if suffix == ".csv":
+            df = pd.read_csv(selected_path)
+            st.success(f"共 {len(df):,} 行 × {len(df.columns)} 列")
+
+            # 筛选行数
+            max_rows = st.slider("预览行数", 10, min(500, len(df)), min(50, len(df)), 10)
+            st.dataframe(df.head(max_rows), use_container_width=True)
+
+            # 下载
+            st.download_button(
+                label="⬇️ 下载此 CSV",
+                data=df.to_csv(index=False).encode("utf-8"),
+                file_name=selected_name,
+                mime="text/csv",
+            )
+
+        elif suffix == ".json":
+            import json
+            with open(selected_path, "r", encoding="utf-8") as f:
+                content = json.load(f)
+            st.json(content)
+
+            st.download_button(
+                label="⬇️ 下载此 JSON",
+                data=json.dumps(content, ensure_ascii=False, indent=2).encode("utf-8"),
+                file_name=selected_name,
+                mime="application/json",
+            )
+
+        else:
+            with open(selected_path, "r", encoding="utf-8", errors="replace") as f:
+                text = f.read(2000)
+            st.text(text)
+
+    except Exception as e:
+        st.error(f"无法读取文件：{e}")
+
+    # ---- 全部文件列表 ----
+    st.markdown("---")
+    with st.expander("📋 全部文件列表", expanded=False):
+        rows = [
+            {
+                "文件名": f.name,
+                "类型": f.suffix.upper(),
+                "大小 (KB)": round(f.stat().st_size / 1024, 1),
+                "修改时间": datetime.fromtimestamp(f.stat().st_mtime).strftime("%Y-%m-%d %H:%M"),
+            }
+            for f in all_files
+        ]
+        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+
+
+# 首次加载时挂载 /predictions/ 路由
+_mount_predictions_route()
 
 if __name__ == "__main__":
     main()

@@ -1,5 +1,6 @@
 """
-APS Data Loader - Merges Order, FG, Capacity, APS, and History CSV files
+APS Data Loader - Merges the CSV files used by the active APS training pipeline.
+Order.csv remains an optional compatibility input.
 """
 import pandas as pd
 import numpy as np
@@ -25,19 +26,26 @@ class APSDataLoader:
         self.aps_df = None
         self.history_df = None
         
-    def load_all_files(self) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    def load_all_files(self) -> Tuple[Optional[pd.DataFrame], pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         """
-        Load all 5 CSV files
+        Load core CSV files used by training.
+
+        Order.csv is retained as an optional compatibility input, but the current
+        training and feature-engineering pipeline does not consume it downstream.
         
         Returns:
             Tuple of (order, fg, capacity, aps, history) DataFrames
         """
         logger.info("Loading CSV files...")
         
-        # Load Order.csv
+        # Order.csv is optional for the current training pipeline.
         order_path = self.data_dir / "Order.csv"
-        self.order_df = pd.read_csv(order_path, encoding='utf-8')
-        logger.info(f"✓ Loaded Order.csv: {len(self.order_df)} rows")
+        if order_path.exists():
+            self.order_df = pd.read_csv(order_path, encoding='utf-8')
+            logger.info(f"✓ Loaded Order.csv: {len(self.order_df)} rows")
+        else:
+            self.order_df = None
+            logger.info("ℹ Order.csv not found - skipping optional file")
         
         # Load FG.csv
         fg_path = self.data_dir / "FG.csv"
@@ -49,10 +57,14 @@ class APSDataLoader:
         self.capacity_df = pd.read_csv(capacity_path, encoding='utf-8')
         logger.info(f"✓ Loaded Capacity.csv: {len(self.capacity_df)} rows")
         
-        # Load APS.csv
+        # APS.csv is also retained only for compatibility.
         aps_path = self.data_dir / "APS.csv"
-        self.aps_df = pd.read_csv(aps_path, encoding='utf-8')
-        logger.info(f"✓ Loaded APS.csv: {len(self.aps_df)} rows")
+        if aps_path.exists():
+            self.aps_df = pd.read_csv(aps_path, encoding='utf-8')
+            logger.info(f"✓ Loaded APS.csv: {len(self.aps_df)} rows")
+        else:
+            self.aps_df = None
+            logger.info("ℹ APS.csv not found - skipping optional file")
         
         # Load History.csv
         history_path = self.data_dir / "History.csv"
