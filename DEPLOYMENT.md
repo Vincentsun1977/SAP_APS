@@ -12,6 +12,7 @@
 ## 📦 依赖清单
 
 ### 核心依赖
+
 ```
 pandas>=2.0.0
 numpy>=1.24.0
@@ -21,17 +22,20 @@ loguru>=0.7.0
 ```
 
 ### Dashboard相关
+
 ```
 streamlit>=1.28.0
 plotly>=5.17.0
 ```
 
 ### 数据库（可选）
+
 ```
 supabase>=2.0.0
 ```
 
 ### 完整依赖列表
+
 参考项目根目录的 `requirements.txt` 文件
 
 ---
@@ -70,6 +74,7 @@ pip install -r requirements.txt
 ```
 
 **注意事项：**
+
 - macOS用户可能需要安装 `libomp`：
   ```bash
   brew install libomp
@@ -110,6 +115,7 @@ python scripts/train_aps_model.py
 ```
 
 **预期输出：**
+
 ```
 ✓ 加载了 2,491 条历史订单
 ✓ 训练数据: 2491 rows × 36 features
@@ -126,12 +132,31 @@ streamlit run streamlit_app/aps_dashboard.py
 ```
 
 **访问地址：**
+
 - 本地：http://localhost:8501
 - 网络：http://<your-ip>:8501
 
 按 `Ctrl+C` 停止服务
 
----
+### 7. 启动 Predictions API（端口 8502，可选）
+
+> 8502 与 8501（Dashboard）是完全独立的进程，**共用同一 Python 环境，互不影响**。新开一个终端，在项目根目录下运行以下命令。
+
+**Windows（PowerShell）：**
+
+```powershell
+cd "C:\path\to\SAP_APS-main"
+
+# 前台运行
+python -m uvicorn src.api.predictions_server:app --host 0.0.0.0 --port 8502
+```
+
+**访问地址：**
+
+- 本地：http://localhost:8502/predictions
+- 网络：http://<your-ip>:8502/predictions
+
+## 按 `Ctrl+C` 停止服务
 
 ## � Linux服务器部署
 
@@ -169,14 +194,16 @@ cd sap-production-predictor
 scp data/raw/*.csv user@server:/opt/sap-production-predictor/data/raw/
 ```
 
-#### 5. 启动服务
+#### 5. 启动服务（端口 8501）
 
 **快速启动：**
+
 ```bash
 ./start.sh
 ```
 
 **使用systemd（生产推荐）：**
+
 ```bash
 sudo cp config/sap-predictor.service /etc/systemd/system/
 sudo systemctl daemon-reload
@@ -185,7 +212,58 @@ sudo systemctl start sap-predictor
 sudo systemctl status sap-predictor
 ```
 
-#### 6. 配置防火墙
+#### 6. 启动 Predictions API（端口 8502，可选）
+
+> 与 8501 完全独立，共用同一 Python 环境，互不影响。
+
+**前台运行（测试用）：**
+
+```bash
+cd /opt/sap-production-predictor
+python3 -m uvicorn src.api.predictions_server:app --host 0.0.0.0 --port 8502
+```
+
+**后台 nohup 运行：**
+
+```bash
+mkdir -p /opt/sap-production-predictor/logs
+nohup python3 -m uvicorn src.api.predictions_server:app \
+    --host 0.0.0.0 --port 8502 \
+    > /opt/sap-production-predictor/logs/predictions_server.log 2>&1 &
+echo "PID: $!"
+```
+
+**使用systemd（生产推荐）：**
+
+```bash
+sudo tee /etc/systemd/system/predictions-api.service > /dev/null << 'EOF'
+[Unit]
+Description=APS Predictions File API (port 8502)
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/opt/sap-production-predictor
+ExecStart=/usr/bin/python3 -m uvicorn src.api.predictions_server:app --host 0.0.0.0 --port 8502
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable predictions-api
+sudo systemctl start predictions-api
+sudo systemctl status predictions-api
+```
+
+访问：http://服务器IP:8502/predictions
+
+#### 7. 配置防火墙
 
 ```bash
 # Ubuntu/Debian
@@ -222,25 +300,26 @@ sudo systemctl reload nginx
 ### Linux部署故障排查
 
 **端口占用：**
+
 ```bash
 sudo lsof -i :8501
 sudo kill -9 <PID>
 ```
 
 **查看服务日志：**
+
 ```bash
 sudo journalctl -u sap-predictor -f
 ```
 
 **内存不足（创建swap）：**
+
 ```bash
 sudo fallocate -l 2G /swapfile
 sudo chmod 600 /swapfile
 sudo mkswap /swapfile
 sudo swapon /swapfile
 ```
-
-
 
 ## �📂 项目结构
 
@@ -274,6 +353,7 @@ sap-production-predictor/
 ### Q1: 训练时提示"未找到数据文件"
 
 **解决方案：**
+
 ```bash
 # 检查文件是否存在
 ls -la data/raw/
@@ -284,6 +364,7 @@ ls -la data/raw/
 ### Q2: Dashboard启动后无法访问
 
 **解决方案：**
+
 ```bash
 # 指定端口启动
 streamlit run streamlit_app/aps_dashboard.py --server.port 8501
@@ -295,6 +376,7 @@ lsof -i :8501
 ### Q3: 模型加载失败（XGBoost错误）
 
 **macOS用户：**
+
 ```bash
 # 安装libomp
 brew install libomp
@@ -305,6 +387,7 @@ pip install xgboost --no-cache-dir
 ```
 
 **其他系统：**
+
 ```bash
 pip install --upgrade xgboost
 ```
@@ -312,6 +395,7 @@ pip install --upgrade xgboost
 ### Q4: 内存不足
 
 **解决方案：**
+
 - 减少训练数据量（只使用最近6个月数据）
 - 调整feature_engineer中的lookback_days参数
 - 增加系统虚拟内存
@@ -321,6 +405,7 @@ pip install --upgrade xgboost
 Dashboard可以**不依赖Supabase**正常运行。
 
 如需Supabase：
+
 ```bash
 # 配置.env文件
 cp .env.example .env
@@ -332,18 +417,20 @@ cp .env.example .env
 ## 🎯 使用流程
 
 1. **首次使用**
+
    ```bash
    # 1. 准备数据
    # 将CSV文件放入 data/raw/
-   
+
    # 2. 训练模型
    python scripts/train_aps_model.py
-   
+
    # 3. 启动Dashboard
    streamlit run streamlit_app/aps_dashboard.py
    ```
 
 2. **日常使用**
+
    ```bash
    # 直接启动Dashboard即可
    streamlit run streamlit_app/aps_dashboard.py
@@ -420,6 +507,7 @@ Dashboard提供5个页面：
 ## 📝 更新日志
 
 ### v1.0 (2025-12-24)
+
 - ✅ 集成5个CSV文件数据源
 - ✅ 创建36维特征工程
 - ✅ 训练XGBoost延迟预测模型

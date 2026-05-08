@@ -9,7 +9,7 @@
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.30+-red.svg)](https://streamlit.io/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-*SAP Production Delay Prediction with XGBoost and Streamlit Dashboard*
+_SAP Production Delay Prediction with XGBoost and Streamlit Dashboard_
 
 [English](#english) | [中文](#中文)
 
@@ -24,6 +24,7 @@
 基于机器学习的SAP生产订单延迟预测系统，使用XGBoost算法分析历史生产数据，预测订单延迟风险，帮助企业提前采取行动，优化生产排程。
 
 **核心功能：**
+
 - 🤖 **智能预测** - 预测实际生产天数（RMSE=1.75天，CV R²=0.37），辅助延迟风险判断
 - 📊 **可视化Dashboard** - Streamlit交互式分析面板
 - 📈 **特征工程** - 54维自动化特征生成（含缺料数据）
@@ -34,17 +35,20 @@
 ### ✨ 主要特性
 
 #### 数据整合
+
 - 支持6个CSV文件数据源（Order, FG, Capacity, APS, History, **Shortage**）
 - 自动数据合并和清洗
 - 2,487条历史订单训练数据（过滤离群值后）
 
 #### 模型性能（v2，2026-04-15）
+
 - **Test RMSE**: 1.751 天
 - **Test MAE**: 1.113 天
 - **Test R²**: 0.313
 - **CV R²**: 0.374 ± 0.136（5折时序交叉验证）
 
 #### Dashboard功能
+
 - 🏠 总览Dashboard - 核心KPI和趋势
 - 📊 模型性能分析 - 混淆矩阵、特征重要性
 - 🔮 实时预测 - 订单延迟风险评估
@@ -92,6 +96,7 @@ data/raw/
 ```
 
 **History.csv 必须包含字段：**
+
 - Sales Order（销售订单号）
 - Order（生产订单号）
 - Material Number（物料号）
@@ -106,6 +111,7 @@ python scripts/train_aps_model.py
 ```
 
 预期输出：
+
 ```
 ✓ 加载了 2,491 条历史订单
 ✓ 模型准确率: 91.2%
@@ -119,6 +125,36 @@ streamlit run streamlit_app/aps_dashboard.py
 ```
 
 访问 http://localhost:8501
+
+#### 6. 启动 Predictions API（端口 8502，可选）
+
+> 8502 与 8501 是完全独立的进程，**共用同一 Python 环境，互不影响**。需在项目根目录下、新开一个终端运行。
+
+**Windows（PowerShell）：**
+
+```powershell
+cd "C:\path\to\SAP_APS-main"
+python -m uvicorn src.api.predictions_server:app --host 0.0.0.0 --port 8502
+```
+
+**Linux（前台，测试用）：**
+
+```bash
+cd /opt/sap-production-predictor
+python3 -m uvicorn src.api.predictions_server:app --host 0.0.0.0 --port 8502
+```
+
+**Linux（后台 nohup）：**
+
+```bash
+mkdir -p logs
+nohup python3 -m uvicorn src.api.predictions_server:app \
+    --host 0.0.0.0 --port 8502 \
+    > logs/predictions_server.log 2>&1 &
+echo "PID: $!"
+```
+
+访问 http://localhost:8502/predictions
 
 ### 📂 项目结构
 
@@ -150,19 +186,20 @@ sap-production-predictor/
 
 模型使用54个特征进行预测，分为9大类：
 
-| 类别 | 特征数 | 示例 |
-|------|--------|------|
-| 基础订单特征 | 8 | 计划生产天数、订单数量、log变换 |
-| 时间特征 | 11 | 季度、星期、月初月末 |
-| 物料与复杂度 | 5 | 复杂度、MRP控制员、约束 |
-| 并发工作负载⭐ | 4 | 创建-开始间隔、并发订单数 |
-| 历史生产时长⭐ | 7 | 物料90天均值/标准差（因果扩展均值） |
-| 目标编码 | 1 | 物料平均生产时长 |
-| 缺料特征⭐ | 7 | 缺料比例、缺料组件数（来自Shortage.csv） |
-| 产能特征 | 3 | 产能利用率、工作强度 |
-| 交互特征 | 8 | 缺料×订单量、复杂度×产能 |
+| 类别           | 特征数 | 示例                                     |
+| -------------- | ------ | ---------------------------------------- |
+| 基础订单特征   | 8      | 计划生产天数、订单数量、log变换          |
+| 时间特征       | 11     | 季度、星期、月初月末                     |
+| 物料与复杂度   | 5      | 复杂度、MRP控制员、约束                  |
+| 并发工作负载⭐ | 4      | 创建-开始间隔、并发订单数                |
+| 历史生产时长⭐ | 7      | 物料90天均值/标准差（因果扩展均值）      |
+| 目标编码       | 1      | 物料平均生产时长                         |
+| 缺料特征⭐     | 7      | 缺料比例、缺料组件数（来自Shortage.csv） |
+| 产能特征       | 3      | 产能利用率、工作强度                     |
+| 交互特征       | 8      | 缺料×订单量、复杂度×产能                 |
 
 **Top 5 最重要特征（v2）：**
+
 1. `earliest_start_days`（最早开工等待天数，重要性0.183）
 2. `total_production_time`（单位生产时长，重要性0.137）
 3. `create_to_start_gap`（创建到开始间隔，重要性0.133）
@@ -199,6 +236,7 @@ sudo systemctl start sap-predictor
 ### 📊 使用示例
 
 #### 预测示例
+
 ```python
 from src.models.xgboost_model import ProductionDelayModel
 
@@ -226,13 +264,14 @@ print(f"延迟概率: {delay_prob[0]:.1%}")
 
 基于2,487条历史订单（过滤离群值后），时序分割评估：
 
-| 数据集 | RMSE | MAE | R² |
-|--------|------|-----|----|
-| 训练集 | 1.155 天 | 0.819 天 | 0.748 |
-| **测试集** | **1.751 天** | **1.113 天** | **0.313** |
-| **5折CV** | **1.701 ± 0.218 天** | **1.141 ± 0.110 天** | **0.374 ± 0.136** |
+| 数据集     | RMSE                 | MAE                  | R²                |
+| ---------- | -------------------- | -------------------- | ----------------- |
+| 训练集     | 1.155 天             | 0.819 天             | 0.748             |
+| **测试集** | **1.751 天**         | **1.113 天**         | **0.313**         |
+| **5折CV**  | **1.701 ± 0.218 天** | **1.141 ± 0.110 天** | **0.374 ± 0.136** |
 
 **数据分布：**
+
 - 训练样本：2,487 条（过滤异常值后）
 - 延迟订单：370 (14.9%)
 - 预测目标：实际生产天数（均值2.95天，中位数2天）
@@ -254,6 +293,7 @@ A: 调整分类阈值（默认0.5）或使用SMOTE处理类别不平衡。
 ### 🤝 贡献
 
 欢迎贡献！请：
+
 1. Fork 项目
 2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
 3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
@@ -277,6 +317,7 @@ A: 调整分类阈值（默认0.5）或使用SMOTE处理类别不平衡。
 A machine learning-based SAP production order delay prediction system using XGBoost algorithm to analyze historical production data and predict order delay risks, helping enterprises take proactive actions and optimize production scheduling.
 
 **Key Features:**
+
 - 🤖 **Smart Prediction** - 84.8% accuracy, 83.8% recall delay prediction model
 - 📈 **Visual Dashboard** - Streamlit interactive analysis panel
 - 📈 **Feature Engineering** - 36-dimensional automated feature generation
@@ -311,13 +352,13 @@ streamlit run streamlit_app/aps_dashboard.py
 
 ### 📈 Model Performance
 
-| Metric | Score |
-|--------|-------|
-| Accuracy | 84.8% |
+| Metric    | Score |
+| --------- | ----- |
+| Accuracy  | 84.8% |
 | Precision | 49.2% |
-| Recall | 83.8% |
-| F1 Score | 0.620 |
-| ROC AUC | 0.902 |
+| Recall    | 83.8% |
+| F1 Score  | 0.620 |
+| ROC AUC   | 0.902 |
 
 ### 🛠️ Tech Stack
 
